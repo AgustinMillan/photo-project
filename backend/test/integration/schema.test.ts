@@ -14,7 +14,7 @@ afterAll(async () => {
 });
 
 describe("schema", () => {
-  it("creates every Phase 1 and Phase 2 table", async () => {
+  it("creates every table through Phase 5", async () => {
     const rows = await client<{ table_name: string }[]>`
       select table_name
       from information_schema.tables
@@ -24,14 +24,26 @@ describe("schema", () => {
 
     expect(rows.map((row) => row.table_name)).toEqual([
       "accounts",
+      "albums",
       "audit_logs",
+      "download_logs",
       "email_verification_tokens",
+      "media_assets",
+      "order_entitlements",
+      "order_item_photos",
+      "order_items",
+      "orders",
       "password_reset_tokens",
+      "payments",
+      "photo_versions",
+      "photos",
       "plan_entitlements",
       "plans",
       "store_domains",
       "store_invitations",
       "store_memberships",
+      "store_profiles",
+      "store_publications",
       "stores",
       "subscription_events",
       "subscriptions",
