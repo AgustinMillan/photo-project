@@ -31,7 +31,8 @@
     "web:lint": "pnpm --filter @photo-platform/web lint",
     "web:typecheck": "pnpm --filter @photo-platform/web typecheck",
     "web:test": "pnpm --filter @photo-platform/web test",
-    "web:build": "pnpm --filter @photo-platform/web build"
+    "web:build": "pnpm --filter @photo-platform/web build",
+    "admin": "pnpm --filter @photo-platform/api admin"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.6.8"

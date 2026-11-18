@@ -52,7 +52,7 @@ export function SubscriptionPage() {
           title={sub.plan.name}
           action={
             <Badge tone={sub.isUsable ? "ok" : "danger"}>
-              {subscriptionStatusLabel(sub.status)}
+              {sub.isPilot ? "Piloto" : subscriptionStatusLabel(sub.status)}
             </Badge>
           }
         >
@@ -73,6 +73,11 @@ export function SubscriptionPage() {
                   {formatDate(sub.trialEndsAt)}
                   {trialDays !== null ? ` (${Math.max(trialDays, 0)} d)` : ""}
                 </dd>
+              </div>
+            ) : sub.isPilot ? (
+              <div>
+                <dt className="font-mono text-xs uppercase tracking-wider text-fg-dim">Vence</dt>
+                <dd className="mt-1 text-fg">Sin vencimiento: cliente piloto</dd>
               </div>
             ) : (
               <div>
@@ -108,6 +113,13 @@ export function SubscriptionPage() {
             ))}
           </ul>
         </Card>
+
+        {sub.isPilot ? (
+          <Alert tone="info">
+            Eres cliente piloto: tienes todas las funciones gratis mientras dure el piloto. Si
+            termina, te avisaremos y tendrás un mes de prueba antes de tener que pagar.
+          </Alert>
+        ) : null}
 
         <Card title="Pagos">
           <p className="text-sm text-fg-dim">

@@ -54,7 +54,9 @@ export function OverviewPage() {
           value={sub ? sub.plan.name : "—"}
           hint={
             sub
-              ? subscriptionStatusLabel(sub.status)
+              ? sub.isPilot
+                ? "Piloto"
+                : subscriptionStatusLabel(sub.status)
               : subscription.loading
                 ? "Cargando…"
                 : "Sin suscripción"
@@ -62,7 +64,13 @@ export function OverviewPage() {
         />
         <Stat
           label={trialDays !== null ? "Días de prueba" : "Vence"}
-          value={trialDays !== null ? Math.max(trialDays, 0) : formatDate(sub?.currentPeriodEnd)}
+          value={
+            trialDays !== null
+              ? Math.max(trialDays, 0)
+              : sub?.isPilot
+                ? "Nunca"
+                : formatDate(sub?.currentPeriodEnd)
+          }
           hint={trialDays !== null ? `Hasta ${formatDate(sub?.trialEndsAt)}` : undefined}
         />
         <Stat

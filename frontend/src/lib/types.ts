@@ -114,6 +114,7 @@ export type Subscription = {
   cancelledAt: string | null;
   suspendedAt: string | null;
   cancelAtPeriodEnd: boolean;
+  isPilot: boolean;
   createdAt: string;
   updatedAt: string;
   entitlements: Entitlement[];

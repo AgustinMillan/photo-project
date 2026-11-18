@@ -105,6 +105,9 @@ export const subscriptions = pgTable(
     cancelledAt: timestamp("cancelled_at", { withTimezone: true, mode: "date" }),
     suspendedAt: timestamp("suspended_at", { withTimezone: true, mode: "date" }),
     cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
+    // Pilot customers get every feature for free, with no expiry, until an
+    // operator ends the pilot explicitly.
+    isPilot: boolean("is_pilot").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
   },
