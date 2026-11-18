@@ -32,6 +32,15 @@ const envSchema = z.object({
   SMTP_HOST: z.string().min(1).default("localhost"),
   SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(1025),
   SMTP_FROM: z.string().min(1).default("no-reply@photo-platform.local"),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASSWORD: z.string().optional(),
+  SMTP_SECURE: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
+  // "log" writes outgoing emails to the application log instead of sending
+  // them. Only meant as a stopgap until a transactional email provider exists.
+  EMAIL_TRANSPORT: z.enum(["smtp", "log"]).default("smtp"),
 });
 
 const result = envSchema.safeParse(process.env);

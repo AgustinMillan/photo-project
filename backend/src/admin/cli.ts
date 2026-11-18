@@ -8,6 +8,7 @@ import {
   extendSubscription,
   listSubscriptions,
   startPilot,
+  verifyUserEmail,
 } from "../modules/billing/billing.admin.js";
 
 const USAGE = `Uso: pnpm admin <comando> [opciones]
@@ -20,6 +21,7 @@ Comandos:
   extend     <email> --days N            Suma días gratis a la prueba o al período pago
   pilot:start <email>                    Cliente piloto: todo habilitado, gratis y sin vencimiento
   pilot:end   <email> [--trial-days N]   Termina el piloto; pasa a prueba del plan base (por defecto 30 días)
+  verify-email <email>                   Marca el email como verificado (mientras no haya proveedor de email)
 
 Opciones comunes:
   --note "texto"                         Nota que queda en la auditoría (ej.: "transferencia 18/11")
@@ -133,6 +135,10 @@ export async function runAdminCli(argv: string[]): Promise<number> {
         note: values.note,
       });
       break;
+    case "verify-email":
+      await verifyUserEmail({ email: requireEmail() });
+      console.log("Email verificado.");
+      return 0;
     default:
       console.error(`Comando desconocido: ${command}\n\n${USAGE}`);
       return 1;

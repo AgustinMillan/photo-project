@@ -199,4 +199,24 @@ describe("admin billing operations", () => {
     expect((await listSubscriptions())[0]?.isPilot).toBe(true);
     expect(await runAdminCli(["unknown"])).toBe(1);
   });
+
+  it("verifies a registered email without the email link", async () => {
+    await app.inject({
+      method: "POST",
+      url: "/api/v1/auth/register",
+      payload: {
+        email: "unverified@example.com",
+        password: PASSWORD,
+        displayName: "Sin verificar",
+      },
+    });
+
+    expect(await runAdminCli(["verify-email", "Unverified@example.com"])).toBe(0);
+    const [row] = await client`
+      select email_verified_at from users where email = 'unverified@example.com'`;
+    expect(row?.email_verified_at).toBeInstanceOf(Date);
+    expect(await runAdminCli(["verify-email", "ghost@example.com"]).catch((e) => e.code)).toBe(
+      "USER_NOT_FOUND",
+    );
+  });
 });
