@@ -39,10 +39,19 @@ export function ForgotPasswordPage() {
       }
     >
       {sent ? (
-        <Alert tone="ok">Si el email está registrado, te enviamos un enlace para restablecer tu contraseña.</Alert>
+        <Alert tone="ok">
+          Si el email está registrado, te enviamos un enlace para restablecer tu contraseña.
+        </Alert>
       ) : (
         <form onSubmit={onSubmit} className="space-y-5" noValidate>
-          <Field label="Email" type="email" autoComplete="email" value={email} error={error} onChange={(e) => setEmail(e.target.value)} />
+          <Field
+            label="Email"
+            type="email"
+            autoComplete="email"
+            value={email}
+            error={error}
+            onChange={(e) => setEmail(e.target.value)}
+          />
           <Button type="submit" loading={busy} className="w-full">
             Enviar enlace
           </Button>

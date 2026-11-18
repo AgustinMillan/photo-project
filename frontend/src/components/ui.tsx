@@ -1,4 +1,9 @@
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react";
+import type {
+  ButtonHTMLAttributes,
+  InputHTMLAttributes,
+  ReactNode,
+  SelectHTMLAttributes,
+} from "react";
 
 export function Spinner({ label = "Cargando…" }: { label?: string }) {
   return (
@@ -35,7 +40,9 @@ export function Button({
       disabled={disabled || loading}
       className={`inline-flex items-center justify-center gap-2 rounded-ui px-4 py-2 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${styles} ${className}`}
     >
-      {loading ? <span className="size-3 animate-spin rounded-full border-2 border-current border-t-transparent" /> : null}
+      {loading ? (
+        <span className="size-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+      ) : null}
       {children}
     </button>
   );
@@ -75,7 +82,10 @@ export function Field({ label, error, hint, id, className = "", ...props }: Fiel
 
   return (
     <div className="space-y-1">
-      <label htmlFor={inputId} className="block font-mono text-xs uppercase tracking-wider text-fg-dim">
+      <label
+        htmlFor={inputId}
+        className="block font-mono text-xs uppercase tracking-wider text-fg-dim"
+      >
         {label}
       </label>
       <input
@@ -104,7 +114,10 @@ export function SelectField({
 
   return (
     <div className="space-y-1">
-      <label htmlFor={selectId} className="block font-mono text-xs uppercase tracking-wider text-fg-dim">
+      <label
+        htmlFor={selectId}
+        className="block font-mono text-xs uppercase tracking-wider text-fg-dim"
+      >
         {label}
       </label>
       <select

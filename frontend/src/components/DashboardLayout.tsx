@@ -21,7 +21,10 @@ export function DashboardLayout() {
         <p className="font-mono text-xs uppercase tracking-[0.3em] text-accent">Photo Platform</p>
 
         <div className="mt-6">
-          <label htmlFor="store-switch" className="font-mono text-xs uppercase tracking-wider text-fg-dim">
+          <label
+            htmlFor="store-switch"
+            className="font-mono text-xs uppercase tracking-wider text-fg-dim"
+          >
             Tienda
           </label>
           <select
@@ -49,7 +52,9 @@ export function DashboardLayout() {
               end={item.end}
               className={({ isActive }) =>
                 `rounded-ui px-3 py-2 text-sm transition-colors ${
-                  isActive ? "bg-overlay text-accent-soft" : "text-fg-muted hover:bg-raised hover:text-fg"
+                  isActive
+                    ? "bg-overlay text-accent-soft"
+                    : "text-fg-muted hover:bg-raised hover:text-fg"
                 }`
               }
             >

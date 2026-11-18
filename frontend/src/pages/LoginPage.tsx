@@ -73,7 +73,13 @@ export function LoginPage() {
       <form onSubmit={onSubmit} className="space-y-5" noValidate>
         {error ? <Alert>{error}</Alert> : null}
         {notice ? <Alert tone="ok">{notice}</Alert> : null}
-        <Field label="Email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <Field
+          label="Email"
+          type="email"
+          autoComplete="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
         <Field
           label="Contraseña"
           type="password"

@@ -30,7 +30,10 @@ export function OverviewPage() {
 
   return (
     <>
-      <PageHeader title={currentStore.name} subtitle={account ? `Cuenta: ${account.name}` : undefined} />
+      <PageHeader
+        title={currentStore.name}
+        subtitle={account ? `Cuenta: ${account.name}` : undefined}
+      />
 
       {trialDays !== null && trialDays <= 3 ? (
         <div className="mb-6">
@@ -49,14 +52,24 @@ export function OverviewPage() {
         <Stat
           label="Plan"
           value={sub ? sub.plan.name : "—"}
-          hint={sub ? subscriptionStatusLabel(sub.status) : subscription.loading ? "Cargando…" : "Sin suscripción"}
+          hint={
+            sub
+              ? subscriptionStatusLabel(sub.status)
+              : subscription.loading
+                ? "Cargando…"
+                : "Sin suscripción"
+          }
         />
         <Stat
           label={trialDays !== null ? "Días de prueba" : "Vence"}
           value={trialDays !== null ? Math.max(trialDays, 0) : formatDate(sub?.currentPeriodEnd)}
           hint={trialDays !== null ? `Hasta ${formatDate(sub?.trialEndsAt)}` : undefined}
         />
-        <Stat label="Vitrina" value={publicationLabel(currentStore.publicationStatus)} hint={url ?? undefined} />
+        <Stat
+          label="Vitrina"
+          value={publicationLabel(currentStore.publicationStatus)}
+          hint={url ?? undefined}
+        />
         <Stat label="Equipo" value={memberCount ?? "—"} hint="miembros activos" />
       </div>
 
@@ -71,7 +84,9 @@ export function OverviewPage() {
           ) : (
             <div className="space-y-2">
               <Badge tone="warn">No habilitadas</Badge>
-              <p className="text-sm text-fg-dim">{salesReasonLabel(sales.data?.sales.reason ?? null)}</p>
+              <p className="text-sm text-fg-dim">
+                {salesReasonLabel(sales.data?.sales.reason ?? null)}
+              </p>
             </div>
           )}
         </Card>

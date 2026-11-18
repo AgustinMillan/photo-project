@@ -61,7 +61,10 @@ export function OnboardingPage() {
           type: accountType,
         });
       }
-      const { store } = await storesApi.create({ name: storeName.trim(), slug: slug.trim().toLowerCase() });
+      const { store } = await storesApi.create({
+        name: storeName.trim(),
+        slug: slug.trim().toLowerCase(),
+      });
       selectStore(store.id);
       await reload();
       navigate("/app", { replace: true });
@@ -84,16 +87,36 @@ export function OnboardingPage() {
 
         {needsAccount ? (
           <>
-            <Field label="Nombre de la cuenta" value={accountName} error={errors.accountName} onChange={(e) => setAccountName(e.target.value)} />
-            <SelectField label="Tipo" value={accountType} onChange={(e) => setAccountType(e.target.value as AccountType)}>
+            <Field
+              label="Nombre de la cuenta"
+              value={accountName}
+              error={errors.accountName}
+              onChange={(e) => setAccountName(e.target.value)}
+            />
+            <SelectField
+              label="Tipo"
+              value={accountType}
+              onChange={(e) => setAccountType(e.target.value as AccountType)}
+            >
               <option value="individual">Fotógrafo independiente</option>
               <option value="studio">Estudio</option>
             </SelectField>
-            <Field label="Email de facturación" type="email" value={billingEmail} error={errors.billingEmail} onChange={(e) => setBillingEmail(e.target.value)} />
+            <Field
+              label="Email de facturación"
+              type="email"
+              value={billingEmail}
+              error={errors.billingEmail}
+              onChange={(e) => setBillingEmail(e.target.value)}
+            />
           </>
         ) : null}
 
-        <Field label="Nombre de la tienda" value={storeName} error={errors.storeName} onChange={(e) => onStoreNameChange(e.target.value)} />
+        <Field
+          label="Nombre de la tienda"
+          value={storeName}
+          error={errors.storeName}
+          onChange={(e) => onStoreNameChange(e.target.value)}
+        />
         <Field
           label="Subdominio"
           value={slug}

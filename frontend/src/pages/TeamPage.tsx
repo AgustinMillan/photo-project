@@ -1,6 +1,15 @@
 import { type FormEvent, useState } from "react";
-import { Alert, Badge, Button, Card, Field, PageHeader, SelectField, Spinner } from "../components/ui.tsx";
 import { useAuth } from "../auth/AuthContext.tsx";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  Field,
+  PageHeader,
+  SelectField,
+  Spinner,
+} from "../components/ui.tsx";
 import { billingApi, storesApi } from "../lib/endpoints.ts";
 import { errorMessage } from "../lib/errors.ts";
 import { formatDate, roleLabel } from "../lib/format.ts";
@@ -57,7 +66,10 @@ export function TeamPage() {
     if (invalid) return;
 
     setBusy(true);
-    await run(() => storesApi.invite(storeId, { email: email.trim(), role }), "Invitación enviada.");
+    await run(
+      () => storesApi.invite(storeId, { email: email.trim(), role }),
+      "Invitación enviada.",
+    );
     setEmail("");
     setBusy(false);
   }
@@ -75,7 +87,10 @@ export function TeamPage() {
           <Alert tone="info">Tu plan actual no incluye gestión de equipo.</Alert>
         ) : null}
 
-        <Card title="Miembros" action={maxMembers !== null ? <Badge>máx. {maxMembers}</Badge> : undefined}>
+        <Card
+          title="Miembros"
+          action={maxMembers !== null ? <Badge>máx. {maxMembers}</Badge> : undefined}
+        >
           {members.loading ? (
             <Spinner />
           ) : members.error ? (
@@ -85,11 +100,15 @@ export function TeamPage() {
               {members.data?.members
                 .filter((m) => m.status !== "removed")
                 .map((member) => {
-                  const editable = canManage && member.role !== "OWNER" && member.userId !== user?.id;
+                  const editable =
+                    canManage && member.role !== "OWNER" && member.userId !== user?.id;
                   const adminLocked = member.role === "ADMIN" && !isOwner;
 
                   return (
-                    <li key={member.membershipId} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                    <li
+                      key={member.membershipId}
+                      className="flex flex-wrap items-center justify-between gap-3 py-3"
+                    >
                       <div>
                         <p className="text-sm text-fg">{member.displayName ?? member.email}</p>
                         <p className="text-xs text-fg-dim">{member.email}</p>
@@ -102,7 +121,12 @@ export function TeamPage() {
                               value={member.role}
                               onChange={(e) =>
                                 void run(
-                                  () => storesApi.updateMember(storeId, member.userId, e.target.value as AssignableRole),
+                                  () =>
+                                    storesApi.updateMember(
+                                      storeId,
+                                      member.userId,
+                                      e.target.value as AssignableRole,
+                                    ),
                                   "Rol actualizado.",
                                 )
                               }
@@ -118,7 +142,10 @@ export function TeamPage() {
                               variant="danger"
                               onClick={() => {
                                 if (window.confirm(`¿Quitar a ${member.email} de la tienda?`)) {
-                                  void run(() => storesApi.removeMember(storeId, member.userId), "Miembro quitado.");
+                                  void run(
+                                    () => storesApi.removeMember(storeId, member.userId),
+                                    "Miembro quitado.",
+                                  );
                                 }
                               }}
                             >
@@ -128,7 +155,9 @@ export function TeamPage() {
                         ) : (
                           <Badge>{roleLabel(member.role)}</Badge>
                         )}
-                        {member.status !== "active" ? <Badge tone="warn">{member.status}</Badge> : null}
+                        {member.status !== "active" ? (
+                          <Badge tone="warn">{member.status}</Badge>
+                        ) : null}
                       </div>
                     </li>
                   );
@@ -140,9 +169,23 @@ export function TeamPage() {
         {canManage ? (
           <>
             <Card title="Invitar">
-              <form onSubmit={onInvite} className="grid gap-4 sm:grid-cols-[1fr_12rem_auto] sm:items-end" noValidate>
-                <Field label="Email" type="email" value={email} error={emailError} onChange={(e) => setEmail(e.target.value)} />
-                <SelectField label="Rol" value={role} onChange={(e) => setRole(e.target.value as AssignableRole)}>
+              <form
+                onSubmit={onInvite}
+                className="grid gap-4 sm:grid-cols-[1fr_12rem_auto] sm:items-end"
+                noValidate
+              >
+                <Field
+                  label="Email"
+                  type="email"
+                  value={email}
+                  error={emailError}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+                <SelectField
+                  label="Rol"
+                  value={role}
+                  onChange={(e) => setRole(e.target.value as AssignableRole)}
+                >
                   {ROLES.filter((r) => isOwner || r !== "ADMIN").map((r) => (
                     <option key={r} value={r}>
                       {roleLabel(r)}
@@ -161,7 +204,10 @@ export function TeamPage() {
               ) : (
                 <ul className="divide-y divide-line">
                   {pending.map((invitation) => (
-                    <li key={invitation.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                    <li
+                      key={invitation.id}
+                      className="flex flex-wrap items-center justify-between gap-3 py-3"
+                    >
                       <div>
                         <p className="text-sm text-fg">{invitation.email}</p>
                         <p className="text-xs text-fg-dim">
@@ -170,7 +216,12 @@ export function TeamPage() {
                       </div>
                       <Button
                         variant="ghost"
-                        onClick={() => void run(() => storesApi.revokeInvitation(storeId, invitation.id), "Invitación revocada.")}
+                        onClick={() =>
+                          void run(
+                            () => storesApi.revokeInvitation(storeId, invitation.id),
+                            "Invitación revocada.",
+                          )
+                        }
                       >
                         Revocar
                       </Button>
