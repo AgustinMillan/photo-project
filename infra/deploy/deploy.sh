@@ -39,10 +39,10 @@ docker compose run --rm --no-deps api node dist/db/migrate.js
 echo "==> Starting API"
 docker compose up -d api
 for _ in $(seq 1 30); do
-  curl -fsS "http://127.0.0.1:$API_PORT/api/v1/health" >/dev/null 2>&1 && break
+  curl -fsS "http://127.0.0.1:$API_PORT/api/v1/health/ready" >/dev/null 2>&1 && break
   sleep 2
 done
-curl -fsS "http://127.0.0.1:$API_PORT/api/v1/health" >/dev/null || { docker compose logs --tail 50 api; exit 1; }
+curl -fsS "http://127.0.0.1:$API_PORT/api/v1/health/ready" >/dev/null || { docker compose logs --tail 50 api; exit 1; }
 
 echo "==> Publishing web panel"
 rm -rf "$WEB_ROOT.old"
@@ -58,5 +58,5 @@ fi
 nginx -t
 systemctl reload nginx
 
-echo "==> Done. API health: http://127.0.0.1:$API_PORT/api/v1/health"
+echo "==> Done. API health: http://127.0.0.1:$API_PORT/api/v1/health/ready"
 echo "    Admin: cd $DEPLOY_DIR && docker compose exec api node dist/admin/cli.js list"
