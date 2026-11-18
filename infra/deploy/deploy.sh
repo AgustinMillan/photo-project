@@ -47,6 +47,8 @@ curl -fsS "http://127.0.0.1:$API_PORT/api/v1/health/ready" >/dev/null || { docke
 echo "==> Publishing web panel"
 rm -rf "$WEB_ROOT.old"
 [[ -d "$WEB_ROOT" ]] && mv "$WEB_ROOT" "$WEB_ROOT.old"
+chmod -R a+rX "$WEB_ROOT.new"
+chmod -R a+rX "$WEB_ROOT.new"
 mv "$WEB_ROOT.new" "$WEB_ROOT"
 
 if [[ ! -f "$SITE_FILE" ]]; then
