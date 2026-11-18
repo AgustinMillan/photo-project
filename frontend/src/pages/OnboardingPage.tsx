@@ -80,7 +80,7 @@ export function OnboardingPage() {
   return (
     <AuthLayout
       title="Configura tu estudio"
-      subtitle="Crea tu cuenta y tu primera tienda. La prueba gratuita de 14 días empieza con la tienda."
+      subtitle="Crea tu cuenta y tu primera tienda. La prueba gratuita de 30 días empieza con la tienda."
     >
       <form onSubmit={onSubmit} className="space-y-5" noValidate>
         {formError ? <Alert>{formError}</Alert> : null}

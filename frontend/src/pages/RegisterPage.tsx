@@ -56,7 +56,7 @@ export function RegisterPage() {
   return (
     <AuthLayout
       title="Crear cuenta"
-      subtitle="Empieza con una prueba gratuita de 14 días."
+      subtitle="Empieza con una prueba gratuita de 30 días."
       footer={
         <>
           ¿Ya tienes cuenta?{" "}

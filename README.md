@@ -53,7 +53,7 @@ pnpm dev
 
 La API queda en `http://localhost:3000`.
 
-Los subdominios de tienda de desarrollo se construyen como `slug.PLATFORM_DOMAIN`. Con el valor por defecto `PLATFORM_DOMAIN=localhost`, una tienda con slug `mi-estudio` queda disponible en `http://mi-estudio.localhost:3000` (el puerto depende del proxy/frontend). Las invitaciones usan `STORE_INVITATION_TTL_DAYS` (7 días por defecto). El trial usa `TRIAL_PLAN_CODE` (`base` por defecto) y `TRIAL_DURATION_DAYS` (`14` por defecto).
+Los subdominios de tienda de desarrollo se construyen como `slug.PLATFORM_DOMAIN`. Con el valor por defecto `PLATFORM_DOMAIN=localhost`, una tienda con slug `mi-estudio` queda disponible en `http://mi-estudio.localhost:3000` (el puerto depende del proxy/frontend). Las invitaciones usan `STORE_INVITATION_TTL_DAYS` (7 días por defecto). El trial usa `TRIAL_PLAN_CODE` (`base` por defecto) y `TRIAL_DURATION_DAYS` (`30` por defecto).
 
 Health checks:
 
