@@ -33,7 +33,7 @@ docker build -f infra/deploy/Dockerfile --target web \
 
 echo "==> Starting database and running migrations"
 cd "$DEPLOY_DIR"
-docker compose up -d postgres
+docker compose up -d --wait postgres
 docker compose run --rm --no-deps api node dist/db/migrate.js
 
 echo "==> Starting API"
