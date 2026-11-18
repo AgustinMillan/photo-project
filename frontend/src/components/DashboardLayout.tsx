@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext.tsx";
 import { roleLabel } from "../lib/format.ts";
+import { useIsAdmin } from "../lib/useIsAdmin.ts";
 import { useWorkspace } from "../workspace/WorkspaceContext.tsx";
 import { Button } from "./ui.tsx";
 
@@ -18,6 +19,7 @@ const NAV = [
 export function DashboardLayout() {
   const { user, logout } = useAuth();
   const { stores, currentStore, selectStore } = useWorkspace();
+  const isAdmin = useIsAdmin();
 
   return (
     <div className="min-h-screen md:grid md:grid-cols-[16rem_1fr]">
@@ -66,6 +68,15 @@ export function DashboardLayout() {
             </NavLink>
           ))}
         </nav>
+
+        {isAdmin ? (
+          <NavLink
+            to="/admin"
+            className="mt-4 block rounded-ui border border-accent/40 px-3 py-2 text-sm text-accent-soft hover:bg-raised"
+          >
+            Admin plataforma
+          </NavLink>
+        ) : null}
 
         <div className="mt-6 border-t border-line pt-4 md:mt-10">
           <p className="truncate text-xs text-fg-dim" title={user?.email}>

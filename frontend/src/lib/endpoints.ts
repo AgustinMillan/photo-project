@@ -2,6 +2,9 @@ import { api } from "./client.ts";
 import type {
   Account,
   AccountType,
+  AdminAccount,
+  AdminAction,
+  AdminOverview,
   Album,
   AssignableRole,
   AuthResponse,
@@ -216,4 +219,11 @@ export const paymentsApi = {
     api.post<{ url: string }>(`/stores/${storeId}/payments/mercadopago/connect`),
   disconnectMercadoPago: (storeId: string) =>
     api.delete<void>(`/stores/${storeId}/payments/mercadopago`),
+};
+
+export const adminApi = {
+  me: () => api.get<{ admin: boolean }>("/admin/me"),
+  overview: (days: number) => api.get<AdminOverview>(`/admin/overview?days=${days}`),
+  accounts: () => api.get<{ accounts: AdminAccount[] }>("/admin/accounts"),
+  action: (body: AdminAction) => api.post<{ ok: boolean }>("/admin/actions", body),
 };

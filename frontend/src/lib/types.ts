@@ -311,3 +311,79 @@ export type MercadoPagoConnection = {
   } | null;
   platformFeePercent: number;
 };
+
+// --- Platform admin ------------------------------------------------------------
+
+export type AdminOverview = {
+  days: number;
+  totals: {
+    users: number;
+    verifiedUsers: number;
+    accounts: number;
+    stores: number;
+    publishedStores: number;
+    mercadoPagoConnected: number;
+    photos: number;
+    storageBytes: number;
+    orders: number;
+    paidOrders: number;
+    pendingOrders: number;
+    gmvCents: number;
+    gmvPeriodCents: number;
+    platformFeesCents: number;
+    paidViaMercadoPago: number;
+    downloads: number;
+    signupsPeriod: number;
+    expiringIn7Days: number;
+  };
+  subscriptions: Array<{ status: string; plan: string; count: number }>;
+  series: Array<{
+    date: string;
+    signups: number;
+    orders: number;
+    paidOrders: number;
+    gmvCents: number;
+  }>;
+  recentOrders: Array<{
+    code: string;
+    status: OrderStatus;
+    checkoutMethod: CheckoutMethod;
+    totalCents: number;
+    createdAt: string;
+    paidAt: string | null;
+    storeSlug: string;
+  }>;
+};
+
+export type AdminAccount = {
+  id: string;
+  name: string;
+  createdAt: string;
+  ownerEmail: string;
+  verified: boolean;
+  storeSlug: string | null;
+  publicationStatus: PublicationStatus | null;
+  status: "none" | "trial" | "active" | "expired" | "cancelled" | "suspended" | "pilot";
+  plan: string | null;
+  trialEndsAt: string | null;
+  currentPeriodEnd: string | null;
+  mercadoPago: boolean;
+  photos: number;
+  paidOrders: number;
+  gmvCents: number;
+  lastOrderAt: string | null;
+  lastLoginAt: string | null;
+};
+
+export type AdminAction =
+  | {
+      action: "activate";
+      email: string;
+      planCode: "base" | "intermediate" | "business";
+      months: number;
+      note?: string;
+    }
+  | { action: "extend"; email: string; days: number; note?: string }
+  | { action: "pilot_start"; email: string; note?: string }
+  | { action: "pilot_end"; email: string; trialDays?: number; note?: string }
+  | { action: "verify_email"; email: string };

@@ -1,5 +1,5 @@
 import { type FormEvent, useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext.tsx";
 import { AuthLayout } from "../components/AuthLayout.tsx";
 import { Alert, Button, Field, SelectField, Spinner } from "../components/ui.tsx";
@@ -7,6 +7,7 @@ import { accountApi, storesApi } from "../lib/endpoints.ts";
 import { errorMessage } from "../lib/errors.ts";
 import { slugify } from "../lib/format.ts";
 import type { AccountType } from "../lib/types.ts";
+import { useIsAdmin } from "../lib/useIsAdmin.ts";
 import { validateEmail, validateRequired, validateSlug } from "../lib/validation.ts";
 import { useWorkspace } from "../workspace/WorkspaceContext.tsx";
 
@@ -16,6 +17,7 @@ export function OnboardingPage() {
   const { user } = useAuth();
   const { loading, account, stores, reload, selectStore } = useWorkspace();
   const navigate = useNavigate();
+  const isAdmin = useIsAdmin();
 
   const [accountName, setAccountName] = useState("");
   const [accountType, setAccountType] = useState<AccountType>("individual");
@@ -82,6 +84,14 @@ export function OnboardingPage() {
       title="Configura tu estudio"
       subtitle="Crea tu cuenta y tu primera tienda. La prueba gratuita de 30 días empieza con la tienda."
     >
+      {isAdmin ? (
+        <p className="mb-5 rounded-ui border border-accent/40 p-3 text-sm">
+          Sos administrador de la plataforma.{" "}
+          <Link to="/admin" className="text-accent-soft underline">
+            Ir al panel de administración
+          </Link>
+        </p>
+      ) : null}
       <form onSubmit={onSubmit} className="space-y-5" noValidate>
         {formError ? <Alert>{formError}</Alert> : null}
 

@@ -58,6 +58,16 @@ const envSchema = z.object({
   PLATFORM_FEE_PERCENT: z.coerce.number().min(0).max(50).default(0),
   // 32-byte key (base64) used to encrypt stored payment tokens.
   TOKEN_ENCRYPTION_KEY: z.string().default(""),
+  // Comma-separated emails with access to the platform admin dashboard.
+  PLATFORM_ADMIN_EMAILS: z
+    .string()
+    .default("")
+    .transform((value) =>
+      value
+        .split(",")
+        .map((email) => email.trim().toLowerCase())
+        .filter(Boolean),
+    ),
 });
 
 const result = envSchema.safeParse(process.env);

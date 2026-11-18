@@ -4,6 +4,7 @@ import { DashboardLayout } from "./components/DashboardLayout.tsx";
 import { RequireAuth, RequireWorkspace } from "./components/guards.tsx";
 import { resolveTenantSlug } from "./lib/tenant.ts";
 import { AcceptInvitationPage } from "./pages/AcceptInvitationPage.tsx";
+import { AdminPage } from "./pages/AdminPage.tsx";
 import { AlbumPage } from "./pages/AlbumPage.tsx";
 import { CatalogPage } from "./pages/CatalogPage.tsx";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage.tsx";
@@ -49,6 +50,7 @@ export function App() {
           <Route path="/reset-password" element={<ResetPasswordPage />} />
 
           <Route element={<RequireAuth />}>
+            <Route path="/admin" element={<AdminPage />} />
             <Route element={<AuthedShell />}>
               <Route path="/onboarding" element={<OnboardingPage />} />
               <Route path="/accept-invitation" element={<AcceptInvitationPage />} />
