@@ -344,6 +344,8 @@ describe("Mercado Pago marketplace", () => {
 
     const paymentsRows = await client`select method, provider_payment_id from payments`;
     expect(paymentsRows).toEqual([{ method: "mercadopago", provider_payment_id: "mp:9001" }]);
+    // Notifications signed with the test-mode secret are accepted too.
+    expect((await signedWebhook(owner.storeId, "9001", "test-mode-secret")).statusCode).toBe(200);
     const view = await app.inject({
       method: "GET",
       url: `/api/v1/public/orders/${order.orderId}?token=${order.accessToken}`,
