@@ -10,6 +10,7 @@ import {
   useSearchParams,
 } from "react-router-dom";
 import { ApiError } from "../lib/api.ts";
+import { serviceContactUrl } from "../lib/contact.ts";
 import { shopApi } from "../lib/endpoints.ts";
 import { errorMessage } from "../lib/errors.ts";
 import { formatMoney } from "../lib/money.ts";
@@ -170,6 +171,56 @@ function HomePage({ data }: { data: PublicStorefront }) {
         </div>
       </section>
     ),
+    services: content.services.length ? (
+      <section key="services" className="mx-auto max-w-6xl px-5 pt-16">
+        <h2 className="mb-6 font-mono text-xs uppercase tracking-[0.3em] text-accent">Servicios</h2>
+        <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {content.services.map((service) => {
+            const contact = serviceContactUrl(content, service.title);
+            return (
+              <li
+                key={service.id}
+                className="flex flex-col overflow-hidden rounded-ui border border-line/60 bg-surface"
+              >
+                {service.coverUrl ? (
+                  <img
+                    src={service.coverUrl}
+                    alt=""
+                    loading="lazy"
+                    className="aspect-[4/3] w-full object-cover"
+                  />
+                ) : null}
+                <div className="flex flex-1 flex-col gap-3 p-5">
+                  <h3 className="font-display text-xl text-fg">{service.title}</h3>
+                  {service.description ? (
+                    <p className="whitespace-pre-line text-sm leading-relaxed text-fg-muted">
+                      {service.description}
+                    </p>
+                  ) : null}
+                  <div className="mt-auto flex items-center justify-between gap-3 pt-2">
+                    <span className="text-sm text-fg">
+                      {service.priceFromCents
+                        ? `Desde ${formatMoney(service.priceFromCents)}`
+                        : "A consultar"}
+                    </span>
+                    {contact ? (
+                      <a
+                        href={contact}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-ui border border-accent px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-accent hover:bg-accent hover:text-void"
+                      >
+                        Consultar
+                      </a>
+                    ) : null}
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+    ) : null,
     albums:
       data.albums.length || data.photos.length ? (
         <section key="albums" className="mx-auto max-w-6xl px-5 pt-16">

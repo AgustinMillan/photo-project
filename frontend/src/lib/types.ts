@@ -134,7 +134,15 @@ export type SalesStatus = {
 
 // --- Storefront (phase 3) ---------------------------------------------------
 
-export type SectionKey = "hero" | "albums" | "about" | "contact";
+export type SectionKey = "hero" | "services" | "albums" | "about" | "contact";
+
+export type StorefrontService = {
+  id: string;
+  title: string;
+  description: string;
+  priceFromCents: number | null;
+  coverPhotoId: string | null;
+};
 
 export type StorefrontContent = {
   displayName: string;
@@ -148,6 +156,7 @@ export type StorefrontContent = {
   paymentInstructions: string;
   watermarkText: string;
   sections: Array<{ key: SectionKey; enabled: boolean }>;
+  services: StorefrontService[];
 };
 
 export type StorefrontAdmin = {
@@ -252,8 +261,9 @@ export type PublicStorefront = {
     payments: { mercadopago: boolean; transfer: boolean };
   };
   publication: { version: number; publishedAt: string };
-  content: Omit<StorefrontContent, "watermarkText" | "paymentInstructions"> & {
+  content: Omit<StorefrontContent, "watermarkText" | "paymentInstructions" | "services"> & {
     coverUrl: string | null;
+    services: Array<Omit<StorefrontService, "coverPhotoId"> & { coverUrl: string | null }>;
   };
   albums: Array<{
     id: string;

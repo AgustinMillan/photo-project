@@ -73,7 +73,7 @@ else:
     store = stores[0]
 sid = store["id"]
 
-profile = {"displayName": "QA Demo", "tagline": "Prueba automática", "bio": "Tienda de prueba interna.", "contactEmail": "", "phone": "", "instagram": "", "website": "", "coverPhotoId": None, "paymentInstructions": "Alias: QA.DEMO.PRUEBA", "watermarkText": "QA DEMO", "sections": [{"key": k, "enabled": True} for k in ["hero","albums","about","contact"]]}
+profile = {"displayName": "QA Demo", "tagline": "Prueba automática", "bio": "Tienda de prueba interna.", "contactEmail": "", "phone": "", "instagram": "", "website": "", "coverPhotoId": None, "paymentInstructions": "Alias: QA.DEMO.PRUEBA", "watermarkText": "QA DEMO", "sections": [{"key": k, "enabled": True} for k in ["hero","services","albums","about","contact"]], "services": []}
 s, r = call("PUT", f"/stores/{sid}/storefront", profile, tok); ok("guardar borrador", s == 200, s)
 s, r = call("POST", f"/stores/{sid}/storefront/publish", token=tok); ok("publicar", s == 200, r)
 s, r = call("POST", f"/stores/{sid}/albums", {"title": "Galería QA", "priceCents": 300000, "status": "published"}, tok); ok("crear galería", s == 201, s)

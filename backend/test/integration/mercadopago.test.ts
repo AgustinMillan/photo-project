@@ -163,7 +163,10 @@ async function publishWithPhoto(owner: Owner, paymentInstructions = "") {
       coverPhotoId: null,
       paymentInstructions,
       watermarkText: "X",
-      sections: ["hero", "albums", "about", "contact"].map((key) => ({ key, enabled: true })),
+      sections: ["hero", "services", "albums", "about", "contact"].map((key) => ({
+        key,
+        enabled: true,
+      })),
     },
   });
   await app.inject({

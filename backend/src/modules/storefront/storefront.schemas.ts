@@ -14,6 +14,18 @@ export const updateStorefrontSchema = z.object({
   coverPhotoId: z.string().uuid().nullable().optional(),
   paymentInstructions: text(2000),
   watermarkText: text(60),
+  services: z
+    .array(
+      z.object({
+        id: z.string().uuid(),
+        title: text(80).min(1),
+        description: text(600),
+        priceFromCents: z.number().int().positive().max(100_000_000).nullable(),
+        coverPhotoId: z.string().uuid().nullable(),
+      }),
+    )
+    .max(12)
+    .default([]),
   sections: z
     .array(z.object({ key: z.enum(STOREFRONT_SECTION_KEYS), enabled: z.boolean() }))
     .length(STOREFRONT_SECTION_KEYS.length),
