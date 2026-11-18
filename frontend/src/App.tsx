@@ -11,6 +11,7 @@ import { LoginPage } from "./pages/LoginPage.tsx";
 import { OnboardingPage } from "./pages/OnboardingPage.tsx";
 import { OrdersPage } from "./pages/OrdersPage.tsx";
 import { OverviewPage } from "./pages/OverviewPage.tsx";
+import { PaymentsPage } from "./pages/PaymentsPage.tsx";
 import { RegisterPage } from "./pages/RegisterPage.tsx";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage.tsx";
 import { SettingsPage } from "./pages/SettingsPage.tsx";
@@ -58,6 +59,7 @@ export function App() {
                   <Route path="catalog" element={<CatalogPage />} />
                   <Route path="catalog/:albumId" element={<AlbumPage />} />
                   <Route path="orders" element={<OrdersPage />} />
+                  <Route path="payments" element={<PaymentsPage />} />
                   <Route path="team" element={<TeamPage />} />
                   <Route path="subscription" element={<SubscriptionPage />} />
                   <Route path="settings" element={<SettingsPage />} />

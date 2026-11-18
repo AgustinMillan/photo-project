@@ -327,6 +327,10 @@ function CartPage({ data }: { data: PublicStorefront }) {
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const options = data.store.payments;
+  const [method, setMethod] = useState<"mercadopago" | "transfer">(
+    options.mercadopago ? "mercadopago" : "transfer",
+  );
 
   async function checkout(event: FormEvent) {
     event.preventDefault();
@@ -337,10 +341,21 @@ function CartPage({ data }: { data: PublicStorefront }) {
       const { order } = await shopApi.checkout({
         customerName: name,
         customerEmail: email,
+        paymentMethod: method,
         items: payable.map((item) => ({ type: item.type, id: item.id })),
       });
       cart.clear();
-      navigate(`/pedido/${order.orderId}?token=${encodeURIComponent(order.accessToken)}&nuevo=1`);
+      const orderPath = `/pedido/${order.orderId}?token=${encodeURIComponent(order.accessToken)}&nuevo=1`;
+      if (order.paymentMethod === "mercadopago") {
+        try {
+          const { url } = await shopApi.mercadoPagoCheckout(order.orderId, order.accessToken);
+          window.location.assign(url);
+          return;
+        } catch {
+          // The order exists; the order page offers to retry the payment.
+        }
+      }
+      navigate(orderPath);
     } catch (caught) {
       if (caught instanceof ApiError && caught.code === "ITEMS_UNAVAILABLE") {
         const ids = (caught.details as { ids?: string[] } | undefined)?.ids ?? [];
@@ -411,8 +426,9 @@ function CartPage({ data }: { data: PublicStorefront }) {
             >
               <h2 className="font-display text-xl">Tus datos</h2>
               <p className="text-sm text-fg-dim">
-                Te enviamos por email los datos para pagar. Cuando el estudio confirme el pago, vas
-                a poder descargar las fotos en alta resolución.
+                {method === "mercadopago"
+                  ? "Vas a pagar en Mercado Pago. Apenas se apruebe el pago, te llegan las fotos en alta resolución por email."
+                  : "Te enviamos por email los datos para transferir. Cuando el estudio confirme el pago, vas a poder descargar las fotos en alta resolución."}
               </p>
               <input
                 required
@@ -430,6 +446,31 @@ function CartPage({ data }: { data: PublicStorefront }) {
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full border-0 border-b border-line bg-raised px-3 py-2 focus:border-accent focus:outline-none"
               />
+              {options.mercadopago && options.transfer ? (
+                <fieldset className="space-y-2">
+                  <legend className="mb-1 font-mono text-xs uppercase tracking-wider text-fg-dim">
+                    Forma de pago
+                  </legend>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="radio"
+                      name="method"
+                      checked={method === "mercadopago"}
+                      onChange={() => setMethod("mercadopago")}
+                    />
+                    Mercado Pago (tarjeta, dinero en cuenta) · entrega inmediata
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="radio"
+                      name="method"
+                      checked={method === "transfer"}
+                      onChange={() => setMethod("transfer")}
+                    />
+                    Transferencia bancaria · el estudio confirma el pago
+                  </label>
+                </fieldset>
+              ) : null}
               {error ? (
                 <p role="alert" className="text-sm text-danger">
                   {error}
@@ -440,7 +481,11 @@ function CartPage({ data }: { data: PublicStorefront }) {
                 disabled={busy}
                 className="w-full rounded-ui bg-accent px-5 py-3 font-medium text-void hover:bg-accent-soft disabled:opacity-50"
               >
-                {busy ? "Enviando…" : `Confirmar pedido · ${formatMoney(cart.totalCents)}`}
+                {busy
+                  ? "Enviando…"
+                  : method === "mercadopago"
+                    ? `Pagar con Mercado Pago · ${formatMoney(cart.totalCents)}`
+                    : `Confirmar pedido · ${formatMoney(cart.totalCents)}`}
               </button>
             </form>
           ) : (
@@ -459,9 +504,42 @@ function OrderPage() {
   const [params] = useSearchParams();
   const token = params.get("token") ?? "";
   const isNew = params.get("nuevo") === "1";
-  const order = useLoad(() => shopApi.order(orderId, token), [orderId, token]);
+  const returnedFromMp = params.get("mp") === "1";
+  const [polls, setPolls] = useState(0);
+  const [paying, setPaying] = useState(false);
+  const [payError, setPayError] = useState<string | null>(null);
+  const order = useLoad(
+    // Coming back from Mercado Pago, pull the payment status before showing the page.
+    () =>
+      returnedFromMp || polls > 0
+        ? shopApi.mercadoPagoSync(orderId, token)
+        : shopApi.order(orderId, token),
+    [orderId, token, polls],
+  );
+  const pendingMp =
+    order.data?.order.status === "pending_payment" &&
+    order.data.order.paymentMethod === "mercadopago";
 
-  if (order.loading) return <Loading />;
+  useEffect(() => {
+    // The approval can take a few seconds to reach us; check again for about a minute.
+    if (!pendingMp || !returnedFromMp || polls >= 12) return;
+    const timer = window.setTimeout(() => setPolls((value) => value + 1), 5000);
+    return () => window.clearTimeout(timer);
+  }, [pendingMp, returnedFromMp, polls]);
+
+  async function payWithMercadoPago() {
+    setPaying(true);
+    setPayError(null);
+    try {
+      const { url } = await shopApi.mercadoPagoCheckout(orderId, token);
+      window.location.assign(url);
+    } catch (caught) {
+      setPayError(errorMessage(caught));
+      setPaying(false);
+    }
+  }
+
+  if (order.loading && !order.data) return <Loading />;
   if (order.error || !order.data) {
     return (
       <Notice title="Pedido no encontrado">
@@ -484,7 +562,40 @@ function OrderPage() {
               : "Esperando el pago"}
       </h1>
 
-      {info.status === "pending_payment" ? (
+      {info.status === "pending_payment" && info.paymentMethod === "mercadopago" ? (
+        <div className="mt-6 space-y-4 rounded-ui border border-accent/40 bg-surface p-5">
+          <p className="text-fg-muted">
+            Total:{" "}
+            <strong className="text-fg">{formatMoney(info.totalCents, info.currency)}</strong>
+          </p>
+          {returnedFromMp && polls < 12 ? (
+            <p className="text-sm text-fg-muted" role="status">
+              Estamos esperando la confirmación de Mercado Pago… esta página se actualiza sola.
+            </p>
+          ) : (
+            <p className="text-sm text-fg-dim">Todavía no recibimos la aprobación del pago.</p>
+          )}
+          <button
+            type="button"
+            disabled={paying}
+            onClick={() => void payWithMercadoPago()}
+            className="rounded-ui bg-accent px-5 py-3 font-medium text-void hover:bg-accent-soft disabled:opacity-50"
+          >
+            {paying ? "Abriendo Mercado Pago…" : "Pagar con Mercado Pago"}
+          </button>
+          {payError ? (
+            <p role="alert" className="text-sm text-danger">
+              {payError}
+            </p>
+          ) : null}
+          <p className="text-xs text-fg-dim">
+            Si ya pagaste, no hace falta pagar de nuevo: apenas se apruebe te llega un email con las
+            fotos.
+          </p>
+        </div>
+      ) : null}
+
+      {info.status === "pending_payment" && info.paymentMethod !== "mercadopago" ? (
         <div className="mt-6 space-y-4 rounded-ui border border-accent/40 bg-surface p-5">
           <p className="text-fg-muted">
             Total a pagar:{" "}

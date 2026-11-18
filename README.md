@@ -220,6 +220,18 @@ pnpm admin pilot:end cliente@mail.com [--trial-days 30]      # vuelve al plan ba
 - `pilot:end` no corta el acceso de golpe: pasa la cuenta a una prueba nueva del plan de `TRIAL_PLAN_CODE` (`TRIAL_DURATION_DAYS` por defecto; `--trial-days 0` la deja vencida).
 - En producción se ejecuta con `pnpm --filter @photo-platform/api admin:prod <comando>` después del build.
 
+### Cobros con Mercado Pago (marketplace)
+
+Cada fotógrafo conecta **su propia** cuenta de Mercado Pago desde **Panel → Cobros** (OAuth). El cliente paga en Checkout Pro y el dinero va directo a la cuenta del fotógrafo; la plataforma solo guarda los tokens cifrados (AES-256-GCM con `TOKEN_ENCRYPTION_KEY`).
+
+- **Confirmación automática:** Mercado Pago notifica a `/api/v1/payments/mercadopago/webhook?store=<id>`. La firma `x-signature` se valida con `MP_WEBHOOK_SECRET` y el pago **siempre se vuelve a consultar** a Mercado Pago con las credenciales de la tienda. Se acepta solo si está aprobado, si el cobrador es la cuenta conectada, si la moneda coincide y si `external_reference` es el pedido. Cuando el cliente vuelve del checkout, la página del pedido también sincroniza buscando por `external_reference`, por si el webhook se demora.
+- **Idempotencia:** cada pago de Mercado Pago se guarda con `provider_payment_id` único, así que un webhook repetido nunca cuenta dos veces. La confirmación usa el mismo camino que el registro manual (`settleOrderPayment`): los derechos de descarga se crean una sola vez y el cliente recibe el email con las fotos.
+- **Comisión de la plataforma:** `PLATFORM_FEE_PERCENT` (por defecto `0`). Se congela por pedido en `orders.platform_fee_cents` y se envía como `marketplace_fee` solo si es mayor a cero.
+- **Medios de pago:** Mercado Pago se ofrece si la app está configurada y la tienda conectó su cuenta. La transferencia se ofrece si la tienda publicó instrucciones de pago, o si no hay otro medio.
+- **Reembolsos y contracargos:** quedan registrados en auditoría (`order.provider_payment_reversed`). Por ahora no revocan descargas automáticamente.
+
+Configuración de la app en Mercado Pago Developers: URL de redirección `<APP_URL>/api/v1/payments/mercadopago/callback`, webhooks del evento **Pagos** apuntando a `<APP_URL>/api/v1/payments/mercadopago/webhook`. Variables: `MP_CLIENT_ID`, `MP_CLIENT_SECRET`, `MP_WEBHOOK_SECRET`, `MP_USE_PKCE` (si se activó PKCE en la app).
+
 La configuración inicial está documentada en [ADR-0003](docs/adr/0003-planes-suscripciones-entitlements.md).
 
 ## Documentación

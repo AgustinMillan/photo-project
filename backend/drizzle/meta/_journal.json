@@ -36,6 +36,13 @@
       "when": 1794995716679,
       "tag": "0004_storefront_catalog_orders",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794998938549,
+      "tag": "0005_mercadopago",
+      "breakpoints": true
     }
   ]
 }

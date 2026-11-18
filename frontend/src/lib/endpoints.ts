@@ -12,6 +12,7 @@ import type {
   Entitlement,
   Invitation,
   Member,
+  MercadoPagoConnection,
   OrderDetail,
   OrderStatus,
   OrderSummary,
@@ -185,12 +186,34 @@ export const shopApi = {
   checkout: (body: {
     customerName: string;
     customerEmail: string;
+    paymentMethod: "transfer" | "mercadopago";
     items: Array<{ type: "photo" | "album"; id: string }>;
   }) => api.post<{ order: CreatedOrder }>("/public/orders", body, { auth: false }),
+  mercadoPagoCheckout: (orderId: string, token: string) =>
+    api.post<{ url: string }>(
+      `/public/orders/${orderId}/mercadopago/checkout?token=${encodeURIComponent(token)}`,
+      undefined,
+      { auth: false },
+    ),
+  mercadoPagoSync: (orderId: string, token: string) =>
+    api.post<CustomerOrder>(
+      `/public/orders/${orderId}/mercadopago/sync?token=${encodeURIComponent(token)}`,
+      undefined,
+      { auth: false },
+    ),
   order: (orderId: string, token: string) =>
     api.get<CustomerOrder>(`/public/orders/${orderId}?token=${encodeURIComponent(token)}`, {
       auth: false,
     }),
   downloadUrl: (orderId: string, photoId: string, token: string) =>
     `/api/v1/public/orders/${orderId}/photos/${photoId}/download?token=${encodeURIComponent(token)}`,
+};
+
+export const paymentsApi = {
+  mercadoPago: (storeId: string) =>
+    api.get<MercadoPagoConnection>(`/stores/${storeId}/payments/mercadopago`),
+  connectMercadoPago: (storeId: string) =>
+    api.post<{ url: string }>(`/stores/${storeId}/payments/mercadopago/connect`),
+  disconnectMercadoPago: (storeId: string) =>
+    api.delete<void>(`/stores/${storeId}/payments/mercadopago`),
 };

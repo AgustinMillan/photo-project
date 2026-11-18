@@ -44,6 +44,20 @@ const envSchema = z.object({
   // Private media storage (originals and derivatives). Must not be web-served.
   MEDIA_ROOT: z.string().min(1).default("./var/media"),
   MAX_UPLOAD_MB: z.coerce.number().int().min(1).max(200).default(30),
+  // Mercado Pago marketplace application (OAuth). Empty = integration disabled.
+  MP_CLIENT_ID: z.string().default(""),
+  MP_CLIENT_SECRET: z.string().default(""),
+  MP_WEBHOOK_SECRET: z.string().default(""),
+  MP_USE_PKCE: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
+  MP_API_BASE: z.string().url().default("https://api.mercadopago.com"),
+  MP_AUTH_BASE: z.string().url().default("https://auth.mercadopago.com"),
+  // Platform commission on each Mercado Pago sale, in percent (0 = disabled).
+  PLATFORM_FEE_PERCENT: z.coerce.number().min(0).max(50).default(0),
+  // 32-byte key (base64) used to encrypt stored payment tokens.
+  TOKEN_ENCRYPTION_KEY: z.string().default(""),
 });
 
 const result = envSchema.safeParse(process.env);

@@ -17,6 +17,7 @@ import { AppError } from "../../shared/errors/app-error.js";
 import { SECTIONS_REORDER_FEATURE } from "../billing/billing.constants.js";
 import { getEffectiveEntitlement, getStoreSalesStatus } from "../billing/billing.service.js";
 import { derivedPath, ensureCoverVariant } from "../catalog/media.js";
+import { storePaymentOptions } from "../payments/payment-options.js";
 import type { StoreAccess } from "../stores/store-access.js";
 import { normalizeHostname } from "../stores/stores.constants.js";
 import { resolveStoreByHostname } from "../stores/stores.service.js";
@@ -309,11 +310,8 @@ export async function getPublicStorefront(rawHostname: string) {
     });
   }
 
-  const {
-    watermarkText: _watermark,
-    paymentInstructions: _payment,
-    ...content
-  } = publication.content;
+  const { watermarkText: _watermark, paymentInstructions, ...content } = publication.content;
+  const payments = await storePaymentOptions(store.id, paymentInstructions);
 
   const albumRows = await db
     .select({
@@ -345,6 +343,7 @@ export async function getPublicStorefront(rawHostname: string) {
       slug: store.slug,
       purchasesEnabled: store.purchasesEnabled,
       currency: "ARS",
+      payments,
     },
     publication: { version: publication.version, publishedAt: publication.createdAt },
     content: { ...content, coverUrl: await heroUrlForPhoto(store.id, content.coverPhotoId) },

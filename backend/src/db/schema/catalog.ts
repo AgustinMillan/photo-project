@@ -191,8 +191,11 @@ export const photoVersions = pgTable(
 export const ORDER_STATUSES = ["pending_payment", "paid", "cancelled"] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
-export const PAYMENT_METHODS = ["transfer", "cash", "other"] as const;
+export const PAYMENT_METHODS = ["transfer", "cash", "other", "mercadopago"] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+
+export const CHECKOUT_METHODS = ["transfer", "mercadopago"] as const;
+export type CheckoutMethod = (typeof CHECKOUT_METHODS)[number];
 
 export const orders = pgTable(
   "orders",
@@ -209,6 +212,10 @@ export const orders = pgTable(
     totalCents: bigint("total_cents", { mode: "number" }).notNull(),
     accessTokenHash: text("access_token_hash").notNull(),
     paymentInstructions: text("payment_instructions").notNull().default(""),
+    checkoutMethod: text("checkout_method").$type<CheckoutMethod>().notNull().default("transfer"),
+    // Platform commission frozen at checkout (0 while the fee is disabled).
+    platformFeeCents: bigint("platform_fee_cents", { mode: "number" }).notNull().default(0),
+    mpPreferenceId: text("mp_preference_id"),
     paidAt: timestamp("paid_at", { withTimezone: true, mode: "date" }),
     cancelledAt: timestamp("cancelled_at", { withTimezone: true, mode: "date" }),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
@@ -220,6 +227,14 @@ export const orders = pgTable(
     index("orders_store_status_created_idx").on(table.storeId, table.status, table.createdAt),
     check("orders_status_check", sql`${table.status} in ('pending_payment', 'paid', 'cancelled')`),
     check("orders_total_check", sql`${table.totalCents} > 0`),
+    check(
+      "orders_checkout_method_check",
+      sql`${table.checkoutMethod} in ('transfer', 'mercadopago')`,
+    ),
+    check(
+      "orders_platform_fee_check",
+      sql`${table.platformFeeCents} >= 0 and ${table.platformFeeCents} <= ${table.totalCents}`,
+    ),
   ],
 );
 
@@ -285,6 +300,9 @@ export const payments = pgTable(
     amountCents: bigint("amount_cents", { mode: "number" }).notNull(),
     method: text("method").$type<PaymentMethod>().notNull(),
     reference: text("reference").notNull().default(""),
+    // External id (Mercado Pago payment id). Unique so a webhook delivered
+    // twice can never count the same payment twice.
+    providerPaymentId: text("provider_payment_id"),
     recordedByUserId: uuid("recorded_by_user_id").references(() => users.id, {
       onDelete: "set null",
     }),
@@ -293,7 +311,13 @@ export const payments = pgTable(
   (table) => [
     index("payments_order_idx").on(table.orderId),
     check("payments_amount_check", sql`${table.amountCents} > 0`),
-    check("payments_method_check", sql`${table.method} in ('transfer', 'cash', 'other')`),
+    check(
+      "payments_method_check",
+      sql`${table.method} in ('transfer', 'cash', 'other', 'mercadopago')`,
+    ),
+    uniqueIndex("payments_provider_payment_uq")
+      .on(table.providerPaymentId)
+      .where(sql`${table.providerPaymentId} is not null`),
   ],
 );
 

@@ -194,7 +194,8 @@ export type Photo = {
 // --- Orders (phase 5) --------------------------------------------------------
 
 export type OrderStatus = "pending_payment" | "paid" | "cancelled";
-export type PaymentMethod = "transfer" | "cash" | "other";
+export type PaymentMethod = "transfer" | "cash" | "other" | "mercadopago";
+export type CheckoutMethod = "transfer" | "mercadopago";
 
 export type OrderSummary = {
   id: string;
@@ -204,6 +205,7 @@ export type OrderSummary = {
   status: OrderStatus;
   totalCents: number;
   currency: string;
+  checkoutMethod: CheckoutMethod;
   createdAt: string;
   paidAt: string | null;
   paidCents: number;
@@ -241,7 +243,14 @@ export type PublicPhoto = {
 };
 
 export type PublicStorefront = {
-  store: { id: string; name: string; slug: string; purchasesEnabled: boolean; currency: string };
+  store: {
+    id: string;
+    name: string;
+    slug: string;
+    purchasesEnabled: boolean;
+    currency: string;
+    payments: { mercadopago: boolean; transfer: boolean };
+  };
   publication: { version: number; publishedAt: string };
   content: Omit<StorefrontContent, "watermarkText" | "paymentInstructions"> & {
     coverUrl: string | null;
@@ -270,6 +279,7 @@ export type CreatedOrder = {
   totalCents: number;
   currency: string;
   paymentInstructions: string;
+  paymentMethod: CheckoutMethod;
 };
 
 export type CustomerOrder = {
@@ -282,9 +292,22 @@ export type CustomerOrder = {
     totalCents: number;
     currency: string;
     paymentInstructions: string;
+    paymentMethod: CheckoutMethod;
     createdAt: string;
     paidAt: string | null;
   };
   items: Array<{ kind: "photo" | "album"; title: string; priceCents: number }>;
   downloads: Array<{ photoId: string; title: string; thumbUrl: string }>;
+};
+
+export type MercadoPagoConnection = {
+  available: boolean;
+  connected: boolean;
+  account: {
+    providerUserId: string;
+    liveMode: boolean;
+    connectedAt: string;
+    expiresAt: string | null;
+  } | null;
+  platformFeePercent: number;
 };

@@ -24,11 +24,14 @@ import { AppError } from "../../shared/errors/app-error.js";
 import { logger } from "../../shared/logger.js";
 import { assertStorePurchasesEnabled } from "../billing/billing.service.js";
 import { originalPath } from "../catalog/media.js";
+import { storePaymentOptions } from "../payments/payment-options.js";
 import { mediaUrl, requirePublishedStoreByHost } from "../storefront/storefront.service.js";
 import type { StoreAccess } from "../stores/store-access.js";
 import { normalizeHostname } from "../stores/stores.constants.js";
 import { resolveStoreByHostname } from "../stores/stores.service.js";
 import type { CreateOrderInput, RecordPaymentInput } from "./orders.schemas.js";
+
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -76,7 +79,7 @@ function unavailable(ids: string[]): AppError {
   });
 }
 
-async function storeHostname(storeId: string): Promise<string | null> {
+export async function storeHostname(storeId: string): Promise<string | null> {
   const rows = await db.execute<{ hostname: string }>(
     sql`select hostname from store_domains where store_id = ${storeId} and is_primary limit 1`,
   );
@@ -177,6 +180,21 @@ export async function createOrder(rawHostname: string, input: CreateOrderInput) 
       .orderBy(desc(storePublications.version))
       .limit(1);
 
+    const paymentInstructions = publication?.content.paymentInstructions ?? "";
+    const options = await storePaymentOptions(store.id, paymentInstructions);
+    if (!options[input.paymentMethod]) {
+      throw new AppError({
+        statusCode: 409,
+        code: "PAYMENT_METHOD_UNAVAILABLE",
+        message: "This store does not accept that payment method.",
+        details: { options },
+      });
+    }
+    const platformFeeCents =
+      input.paymentMethod === "mercadopago"
+        ? Math.min(Math.round((totalCents * env.PLATFORM_FEE_PERCENT) / 100), totalCents)
+        : 0;
+
     const [created] = await tx
       .insert(orders)
       .values({
@@ -186,7 +204,9 @@ export async function createOrder(rawHostname: string, input: CreateOrderInput) 
         customerEmail: input.customerEmail,
         totalCents,
         accessTokenHash: "pending",
-        paymentInstructions: publication?.content.paymentInstructions ?? "",
+        paymentInstructions: input.paymentMethod === "transfer" ? paymentInstructions : "",
+        checkoutMethod: input.paymentMethod,
+        platformFeeCents,
       })
       .returning();
     if (!created) throw new Error("Order insert returned no row.");
@@ -259,23 +279,39 @@ export async function createOrder(rawHostname: string, input: CreateOrderInput) 
     sendEmail({
       to: order.customerEmail,
       subject: `Tu pedido ${order.code} en ${store.name}`,
-      text: [
-        `Hola ${order.customerName},`,
-        "",
-        `Recibimos tu pedido ${order.code} por ${total}.`,
-        "",
-        "Cómo pagar:",
-        order.paymentInstructions || "El fotógrafo te va a contactar con los datos de pago.",
-        "",
-        "Cuando el pago se confirme, vas a poder descargar tus fotos desde este enlace:",
-        link,
-      ].join("\n"),
-      html: [
-        `<p>Hola ${escapeHtml(order.customerName)},</p>`,
-        `<p>Recibimos tu pedido <strong>${order.code}</strong> por <strong>${total}</strong>.</p>`,
-        `<p><strong>Cómo pagar:</strong><br>${escapeHtml(order.paymentInstructions || "El fotógrafo te va a contactar con los datos de pago.").replace(/\n/g, "<br>")}</p>`,
-        `<p>Cuando el pago se confirme, vas a poder descargar tus fotos desde <a href="${link}">este enlace</a>.</p>`,
-      ].join(""),
+      text:
+        order.checkoutMethod === "mercadopago"
+          ? [
+              `Hola ${order.customerName},`,
+              "",
+              `Recibimos tu pedido ${order.code} por ${total}.`,
+              "Si todavía no completaste el pago con Mercado Pago, podés hacerlo desde este enlace. Apenas se apruebe, ahí mismo vas a poder descargar tus fotos:",
+              link,
+            ].join("\n")
+          : [
+              `Hola ${order.customerName},`,
+              "",
+              `Recibimos tu pedido ${order.code} por ${total}.`,
+              "",
+              "Cómo pagar:",
+              order.paymentInstructions || "El fotógrafo te va a contactar con los datos de pago.",
+              "",
+              "Cuando el pago se confirme, vas a poder descargar tus fotos desde este enlace:",
+              link,
+            ].join("\n"),
+      html:
+        order.checkoutMethod === "mercadopago"
+          ? [
+              `<p>Hola ${escapeHtml(order.customerName)},</p>`,
+              `<p>Recibimos tu pedido <strong>${order.code}</strong> por <strong>${total}</strong>.</p>`,
+              `<p>Si todavía no completaste el pago con Mercado Pago, podés hacerlo desde <a href="${link}">este enlace</a>. Apenas se apruebe, ahí mismo vas a poder descargar tus fotos.</p>`,
+            ].join("")
+          : [
+              `<p>Hola ${escapeHtml(order.customerName)},</p>`,
+              `<p>Recibimos tu pedido <strong>${order.code}</strong> por <strong>${total}</strong>.</p>`,
+              `<p><strong>Cómo pagar:</strong><br>${escapeHtml(order.paymentInstructions || "El fotógrafo te va a contactar con los datos de pago.").replace(/\n/g, "<br>")}</p>`,
+              `<p>Cuando el pago se confirme, vas a poder descargar tus fotos desde <a href="${link}">este enlace</a>.</p>`,
+            ].join(""),
     }),
   );
   void notifyOwner(store.id, order.code, order.customerName, total).catch((error: unknown) =>
@@ -289,6 +325,7 @@ export async function createOrder(rawHostname: string, input: CreateOrderInput) 
     totalCents: order.totalCents,
     currency: order.currency,
     paymentInstructions: order.paymentInstructions,
+    paymentMethod: order.checkoutMethod,
   };
 }
 
@@ -327,7 +364,7 @@ async function notifyOwner(storeId: string, code: string, customer: string, tota
 // Customer access (no account: the signed link is the credential)
 // ---------------------------------------------------------------------------
 
-async function requireCustomerOrder(rawHostname: string, orderId: string, token?: string) {
+export async function requireCustomerOrder(rawHostname: string, orderId: string, token?: string) {
   // Rights survive unpublishing or suspending the store, so only the hostname
   // mapping is required here, not an active storefront.
   const store = await resolveStoreByHostname(normalizeHostname(rawHostname));
@@ -382,6 +419,7 @@ export async function getCustomerOrder(rawHostname: string, orderId: string, tok
       totalCents: order.totalCents,
       currency: order.currency,
       paymentInstructions: order.status === "pending_payment" ? order.paymentInstructions : "",
+      paymentMethod: order.checkoutMethod,
       createdAt: order.createdAt,
       paidAt: order.paidAt,
     },
@@ -463,6 +501,7 @@ export async function listStoreOrders(access: StoreAccess, status?: OrderStatus)
       status: orders.status,
       totalCents: orders.totalCents,
       currency: orders.currency,
+      checkoutMethod: orders.checkoutMethod,
       createdAt: orders.createdAt,
       paidAt: orders.paidAt,
       paidCents: sql<number>`coalesce((select sum(amount_cents)::bigint from ${payments} p where p.order_id = "orders"."id"), 0)::float8`,
@@ -523,92 +562,169 @@ export async function getStoreOrder(access: StoreAccess, orderId: string) {
  * when the recorded payments cover the total; only then are download rights
  * granted, for the exact photo versions frozen at checkout.
  */
-export async function recordPayment(
-  access: StoreAccess,
+type PaymentValues = {
+  amountCents: number;
+  method: "transfer" | "cash" | "other" | "mercadopago";
+  reference: string;
+  providerPaymentId?: string | null;
+};
+
+type SettleActor =
+  | { kind: "user"; userId: string; accountId: string }
+  | { kind: "provider"; provider: "mercadopago" };
+
+export type SettleResult = {
+  order: typeof orders.$inferSelect;
+  paidCents: number;
+  isPaid: boolean;
+  becamePaid: boolean;
+  duplicate: boolean;
+};
+
+/**
+ * Single path for every payment (manual or Mercado Pago). Runs inside the
+ * caller's transaction with the order row locked. Download rights are created
+ * exactly once, when recorded payments first cover the total.
+ */
+export async function settleOrderPayment(
+  tx: Tx,
   orderId: string,
-  input: RecordPaymentInput,
-) {
-  const result = await db.transaction(async (tx) => {
-    const [order] = await tx
-      .select()
-      .from(orders)
-      .where(and(eq(orders.id, orderId), eq(orders.storeId, access.store.id)))
-      .for("update")
-      .limit(1);
-    if (!order)
-      throw new AppError({ statusCode: 404, code: "ORDER_NOT_FOUND", message: "Order not found." });
-    if (order.status !== "pending_payment") {
-      throw new AppError({
-        statusCode: 409,
-        code: "ORDER_NOT_PENDING",
-        message: "Payments can only be recorded on pending orders.",
-      });
-    }
+  storeId: string,
+  values: PaymentValues,
+  actor: SettleActor,
+): Promise<SettleResult> {
+  const [order] = await tx
+    .select()
+    .from(orders)
+    .where(and(eq(orders.id, orderId), eq(orders.storeId, storeId)))
+    .for("update")
+    .limit(1);
+  if (!order) {
+    throw new AppError({ statusCode: 404, code: "ORDER_NOT_FOUND", message: "Order not found." });
+  }
 
-    const [payment] = await tx
-      .insert(payments)
-      .values({ orderId: order.id, ...input, recordedByUserId: access.userId })
-      .returning();
+  // A customer may pay through Mercado Pago after the order was cancelled; the
+  // money is real, so provider payments still settle it. Manual payments do not.
+  const acceptsPayment =
+    order.status === "pending_payment" ||
+    (order.status === "cancelled" && actor.kind === "provider");
 
-    const [sum] = await tx
-      .select({ total: sql<number>`coalesce(sum(${payments.amountCents}), 0)::float8` })
-      .from(payments)
-      .where(eq(payments.orderId, order.id));
-    const paidCents = Number(sum?.total ?? 0);
-    const isPaid = paidCents >= order.totalCents;
-    const now = new Date();
+  if (order.status === "paid" && actor.kind === "provider") {
+    return { order, paidCents: order.totalCents, isPaid: true, becamePaid: false, duplicate: true };
+  }
+  if (!acceptsPayment) {
+    throw new AppError({
+      statusCode: 409,
+      code: "ORDER_NOT_PENDING",
+      message: "Payments can only be recorded on pending orders.",
+    });
+  }
 
-    if (isPaid) {
+  const inserted = await tx
+    .insert(payments)
+    .values({
+      orderId: order.id,
+      amountCents: values.amountCents,
+      method: values.method,
+      reference: values.reference,
+      providerPaymentId: values.providerPaymentId ?? null,
+      recordedByUserId: actor.kind === "user" ? actor.userId : null,
+    })
+    .onConflictDoNothing()
+    .returning({ id: payments.id });
+  const duplicate = inserted.length === 0;
+
+  const [sum] = await tx
+    .select({ total: sql<number>`coalesce(sum(${payments.amountCents}), 0)::float8` })
+    .from(payments)
+    .where(eq(payments.orderId, order.id));
+  const paidCents = Number(sum?.total ?? 0);
+  const isPaid = paidCents >= order.totalCents;
+  const now = new Date();
+
+  if (isPaid && !duplicate) {
+    await tx
+      .update(orders)
+      .set({ status: "paid", paidAt: now, cancelledAt: null, updatedAt: now })
+      .where(eq(orders.id, order.id));
+    const covered = await tx
+      .select({ photoId: orderItemPhotos.photoId, versionId: orderItemPhotos.photoVersionId })
+      .from(orderItemPhotos)
+      .where(eq(orderItemPhotos.orderId, order.id));
+    if (covered.length) {
       await tx
-        .update(orders)
-        .set({ status: "paid", paidAt: now, updatedAt: now })
-        .where(eq(orders.id, order.id));
-      const covered = await tx
-        .select({ photoId: orderItemPhotos.photoId, versionId: orderItemPhotos.photoVersionId })
-        .from(orderItemPhotos)
-        .where(eq(orderItemPhotos.orderId, order.id));
-      if (covered.length) {
-        await tx.insert(orderEntitlements).values(
+        .insert(orderEntitlements)
+        .values(
           covered.map((row) => ({
             orderId: order.id,
             storeId: order.storeId,
             photoId: row.photoId,
             photoVersionId: row.versionId,
           })),
-        );
-      }
+        )
+        .onConflictDoNothing();
     }
+  }
 
+  if (!duplicate) {
     await tx.insert(auditLogs).values({
-      accountId: access.account.id,
-      storeId: access.store.id,
-      actorUserId: access.userId,
+      accountId: actor.kind === "user" ? actor.accountId : null,
+      storeId: order.storeId,
+      actorUserId: actor.kind === "user" ? actor.userId : null,
+      actorType: actor.kind === "user" ? "user" : actor.provider,
       action: isPaid ? "order.paid" : "order.payment_recorded",
       entityType: "order",
       entityId: order.id,
       after: {
-        paymentId: payment?.id,
-        amountCents: input.amountCents,
-        method: input.method,
+        paymentId: inserted[0]?.id,
+        amountCents: values.amountCents,
+        method: values.method,
+        providerPaymentId: values.providerPaymentId ?? null,
         paidCents,
       },
     });
-
-    return { order, paidCents, isPaid };
-  });
-
-  if (result.isPaid) {
-    const hostname = (await storeHostname(access.store.id)) ?? access.store.slug;
-    const link = orderLink(hostname, result.order.id);
-    void notify(
-      sendEmail({
-        to: result.order.customerEmail,
-        subject: `Tus fotos del pedido ${result.order.code} están listas`,
-        text: `Hola ${result.order.customerName},\n\nConfirmamos el pago de tu pedido ${result.order.code}. Ya podés descargar tus fotos en alta resolución:\n${link}\n\nGuardá este enlace: lo podés usar cuando quieras.`,
-        html: `<p>Hola ${escapeHtml(result.order.customerName)},</p><p>Confirmamos el pago de tu pedido <strong>${result.order.code}</strong>. Ya podés <a href="${link}">descargar tus fotos en alta resolución</a>.</p><p>Guardá este enlace: lo podés usar cuando quieras.</p>`,
-      }),
-    );
   }
+
+  return { order, paidCents, isPaid, becamePaid: isPaid && !duplicate, duplicate };
+}
+
+/** Emails the customer the download link once an order becomes paid. */
+export async function notifyOrderPaid(order: typeof orders.$inferSelect): Promise<void> {
+  const [store] = await db
+    .select({ slug: stores.slug })
+    .from(stores)
+    .where(eq(stores.id, order.storeId))
+    .limit(1);
+  const hostname = (await storeHostname(order.storeId)) ?? store?.slug ?? "";
+  const link = orderLink(hostname, order.id);
+  void notify(
+    sendEmail({
+      to: order.customerEmail,
+      subject: `Tus fotos del pedido ${order.code} están listas`,
+      text: `Hola ${order.customerName},\n\nConfirmamos el pago de tu pedido ${order.code}. Ya podés descargar tus fotos en alta resolución:\n${link}\n\nGuardá este enlace: lo podés usar cuando quieras.`,
+      html: `<p>Hola ${escapeHtml(order.customerName)},</p><p>Confirmamos el pago de tu pedido <strong>${order.code}</strong>. Ya podés <a href="${link}">descargar tus fotos en alta resolución</a>.</p><p>Guardá este enlace: lo podés usar cuando quieras.</p>`,
+    }),
+  );
+}
+
+/**
+ * Records money received outside the platform (transfer, cash). The order
+ * becomes paid only when recorded payments cover the total.
+ */
+export async function recordPayment(
+  access: StoreAccess,
+  orderId: string,
+  input: RecordPaymentInput,
+) {
+  const result = await db.transaction((tx) =>
+    settleOrderPayment(tx, orderId, access.store.id, input, {
+      kind: "user",
+      userId: access.userId,
+      accountId: access.account.id,
+    }),
+  );
+
+  if (result.becamePaid) await notifyOrderPaid(result.order);
 
   return {
     status: result.isPaid ? ("paid" as const) : ("pending_payment" as const),
