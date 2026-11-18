@@ -1,0 +1,599 @@
+import { type FormEvent, type ReactNode, useEffect, useState } from "react";
+import {
+  BrowserRouter,
+  Link,
+  Navigate,
+  Route,
+  Routes,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
+import { ApiError } from "../lib/api.ts";
+import { shopApi } from "../lib/endpoints.ts";
+import { errorMessage } from "../lib/errors.ts";
+import { formatMoney } from "../lib/money.ts";
+import type { PublicPhoto, PublicStorefront } from "../lib/types.ts";
+import { useLoad } from "../lib/useLoad.ts";
+import { CartProvider, useCart } from "./cart.tsx";
+
+function Loading() {
+  return (
+    <div className="flex min-h-[50vh] items-center justify-center" role="status">
+      <span className="size-6 animate-spin rounded-full border-2 border-line border-t-accent" />
+    </div>
+  );
+}
+
+function Notice({ title, children }: { title: string; children?: ReactNode }) {
+  return (
+    <main className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
+      <h1 className="font-display text-4xl text-fg">{title}</h1>
+      {children ? <div className="mt-4 max-w-md text-fg-dim">{children}</div> : null}
+    </main>
+  );
+}
+
+function Shell({ data, children }: { data: PublicStorefront; children: ReactNode }) {
+  const cart = useCart();
+  return (
+    <div className="min-h-screen">
+      <header className="sticky top-0 z-20 border-b border-line/60 bg-void/85 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-4">
+          <Link to="/" className="font-display text-xl text-fg">
+            {data.content.displayName}
+          </Link>
+          <Link
+            to="/carrito"
+            className="rounded-ui border border-line px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-fg-muted hover:border-accent"
+          >
+            Carrito {cart.count ? <span className="text-accent">({cart.count})</span> : null}
+          </Link>
+        </div>
+      </header>
+      {children}
+      <footer className="mt-24 border-t border-line/60 px-5 py-8 text-center text-xs text-fg-dim">
+        © {new Date().getFullYear()} {data.content.displayName}
+      </footer>
+    </div>
+  );
+}
+
+function PhotoGrid({
+  photos,
+  purchasesEnabled,
+  coveredByAlbum,
+}: {
+  photos: PublicPhoto[];
+  purchasesEnabled: boolean;
+  coveredByAlbum?: boolean;
+}) {
+  const cart = useCart();
+  const [open, setOpen] = useState<PublicPhoto | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => event.key === "Escape" && setOpen(null);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
+  return (
+    <>
+      <ul className="columns-2 gap-3 md:columns-3 xl:columns-4">
+        {photos.map((photo) => {
+          const inCart = cart.has(photo.id);
+          return (
+            <li
+              key={photo.id}
+              className="mb-3 break-inside-avoid overflow-hidden rounded-ui border border-line/60 bg-surface"
+            >
+              <button type="button" className="block w-full" onClick={() => setOpen(photo)}>
+                <img src={photo.thumbUrl} alt={photo.title} loading="lazy" className="w-full" />
+              </button>
+              <div className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
+                <span className="truncate text-fg-muted">{photo.title}</span>
+                {purchasesEnabled && photo.priceCents && !coveredByAlbum ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      inCart
+                        ? cart.remove(photo.id)
+                        : cart.add({
+                            type: "photo",
+                            id: photo.id,
+                            title: photo.title || "Fotografía",
+                            priceCents: photo.priceCents ?? 0,
+                            thumbUrl: photo.thumbUrl,
+                            albumId: photo.albumId,
+                          })
+                    }
+                    className={`shrink-0 rounded-ui px-2 py-1 font-mono text-xs ${inCart ? "bg-accent text-void" : "border border-line text-fg-muted hover:border-accent"}`}
+                  >
+                    {inCart ? "En carrito" : formatMoney(photo.priceCents)}
+                  </button>
+                ) : null}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      {open ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={open.title || "Vista previa"}
+          className="fixed inset-0 z-30 flex items-center justify-center bg-void/95 p-4"
+          onClick={() => setOpen(null)}
+          onKeyDown={() => undefined}
+        >
+          <img
+            src={open.previewUrl}
+            alt={open.title}
+            className="max-h-[90vh] max-w-full object-contain"
+          />
+          <button
+            type="button"
+            className="absolute top-4 right-4 font-mono text-sm text-fg-muted"
+            onClick={() => setOpen(null)}
+          >
+            Cerrar ✕
+          </button>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+function HomePage({ data }: { data: PublicStorefront }) {
+  const { content } = data;
+  const sections = content.sections.filter((section) => section.enabled);
+
+  const render: Record<string, ReactNode> = {
+    hero: (
+      <section key="hero" className="relative flex min-h-[70vh] items-end overflow-hidden">
+        {content.coverUrl ? (
+          <img
+            src={content.coverUrl}
+            alt=""
+            className="absolute inset-0 size-full object-cover opacity-60"
+          />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-overlay via-surface to-void" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-void via-void/40 to-transparent" />
+        <div className="relative mx-auto w-full max-w-6xl px-5 pb-16">
+          <h1 className="font-display text-5xl text-fg md:text-7xl">{content.displayName}</h1>
+          {content.tagline ? (
+            <p className="mt-4 max-w-2xl text-lg text-fg-muted">{content.tagline}</p>
+          ) : null}
+        </div>
+      </section>
+    ),
+    albums:
+      data.albums.length || data.photos.length ? (
+        <section key="albums" className="mx-auto max-w-6xl px-5 pt-16">
+          <h2 className="mb-6 font-mono text-xs uppercase tracking-[0.3em] text-accent">
+            Galerías
+          </h2>
+          <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {data.albums.map((album) => (
+              <li key={album.id}>
+                <Link to={`/galeria/${album.id}`} className="group block">
+                  <div className="aspect-[4/5] overflow-hidden rounded-ui bg-surface">
+                    {album.coverUrl ? (
+                      <img
+                        src={album.coverUrl}
+                        alt=""
+                        loading="lazy"
+                        className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                    ) : null}
+                  </div>
+                  <h3 className="mt-3 font-display text-xl text-fg group-hover:text-accent-soft">
+                    {album.title}
+                  </h3>
+                  <p className="text-xs text-fg-dim">
+                    {album.photoCount} fotos
+                    {album.priceCents ? ` · Completa ${formatMoney(album.priceCents)}` : ""}
+                  </p>
+                </Link>
+              </li>
+            ))}
+          </ul>
+          {data.photos.length ? (
+            <div className="mt-12">
+              <h3 className="mb-4 font-display text-xl">Fotos</h3>
+              <PhotoGrid photos={data.photos} purchasesEnabled={data.store.purchasesEnabled} />
+            </div>
+          ) : null}
+        </section>
+      ) : null,
+    about: content.bio ? (
+      <section key="about" className="mx-auto max-w-3xl px-5 pt-20">
+        <h2 className="mb-4 font-mono text-xs uppercase tracking-[0.3em] text-accent">Sobre mí</h2>
+        <p className="whitespace-pre-line text-lg leading-relaxed text-fg-muted">{content.bio}</p>
+      </section>
+    ) : null,
+    contact:
+      content.contactEmail || content.phone || content.instagram || content.website ? (
+        <section key="contact" className="mx-auto max-w-3xl px-5 pt-20">
+          <h2 className="mb-4 font-mono text-xs uppercase tracking-[0.3em] text-accent">
+            Contacto
+          </h2>
+          <ul className="space-y-2 text-fg-muted">
+            {content.contactEmail ? (
+              <li>
+                <a className="hover:text-accent-soft" href={`mailto:${content.contactEmail}`}>
+                  {content.contactEmail}
+                </a>
+              </li>
+            ) : null}
+            {content.phone ? (
+              <li>
+                <a
+                  className="hover:text-accent-soft"
+                  href={`https://wa.me/${content.phone.replace(/\D/g, "")}`}
+                >
+                  {content.phone}
+                </a>
+              </li>
+            ) : null}
+            {content.instagram ? (
+              <li>
+                <a
+                  className="hover:text-accent-soft"
+                  href={`https://instagram.com/${content.instagram.replace(/^@/, "")}`}
+                >
+                  @{content.instagram.replace(/^@/, "")}
+                </a>
+              </li>
+            ) : null}
+            {content.website ? (
+              <li>
+                <a className="hover:text-accent-soft" href={content.website} rel="noreferrer">
+                  {content.website}
+                </a>
+              </li>
+            ) : null}
+          </ul>
+        </section>
+      ) : null,
+  };
+
+  return <>{sections.map((section) => render[section.key])}</>;
+}
+
+function AlbumView({ purchasesEnabled }: { purchasesEnabled: boolean }) {
+  const { albumId = "" } = useParams();
+  const cart = useCart();
+  const album = useLoad(() => shopApi.album(albumId), [albumId]);
+
+  if (album.loading) return <Loading />;
+  if (album.error || !album.data) return <Notice title="Galería no disponible" />;
+  const { album: info, photos } = album.data;
+  const canBuy = purchasesEnabled && album.data.purchasesEnabled;
+  const albumInCart = cart.has(info.id);
+
+  return (
+    <main className="mx-auto max-w-6xl px-5 pt-10">
+      <Link to="/" className="font-mono text-xs uppercase tracking-wider text-fg-dim hover:text-fg">
+        ← Volver
+      </Link>
+      <div className="mt-4 mb-8 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="font-display text-4xl text-fg">{info.title}</h1>
+          {info.description ? (
+            <p className="mt-2 max-w-2xl text-fg-muted">{info.description}</p>
+          ) : null}
+        </div>
+        {canBuy && info.priceCents ? (
+          <button
+            type="button"
+            onClick={() =>
+              albumInCart
+                ? cart.remove(info.id)
+                : cart.add({
+                    type: "album",
+                    id: info.id,
+                    title: info.title,
+                    priceCents: info.priceCents ?? 0,
+                    thumbUrl: photos[0]?.thumbUrl ?? null,
+                    albumId: null,
+                  })
+            }
+            className={`rounded-ui px-5 py-3 text-sm font-medium ${albumInCart ? "border border-accent text-accent" : "bg-accent text-void hover:bg-accent-soft"}`}
+          >
+            {albumInCart
+              ? "Galería en el carrito ✓"
+              : `Comprar galería completa · ${formatMoney(info.priceCents)}`}
+          </button>
+        ) : null}
+      </div>
+      {!canBuy ? (
+        <p className="mb-6 text-sm text-fg-dim">
+          Las compras no están disponibles en este momento.
+        </p>
+      ) : null}
+      <PhotoGrid photos={photos} purchasesEnabled={canBuy} coveredByAlbum={albumInCart} />
+    </main>
+  );
+}
+
+function CartPage({ data }: { data: PublicStorefront }) {
+  const cart = useCart();
+  const navigate = useNavigate();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function checkout(event: FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      const payable = cart.items.filter((item) => !cart.isCovered(item));
+      const { order } = await shopApi.checkout({
+        customerName: name,
+        customerEmail: email,
+        items: payable.map((item) => ({ type: item.type, id: item.id })),
+      });
+      cart.clear();
+      navigate(`/pedido/${order.orderId}?token=${encodeURIComponent(order.accessToken)}&nuevo=1`);
+    } catch (caught) {
+      if (caught instanceof ApiError && caught.code === "ITEMS_UNAVAILABLE") {
+        const ids = (caught.details as { ids?: string[] } | undefined)?.ids ?? [];
+        cart.removeMany(ids);
+        setError(
+          "Algunas fotos ya no están disponibles y las quitamos del carrito. Revisá el total y volvé a confirmar.",
+        );
+      } else if (caught instanceof ApiError && caught.code === "STORE_PURCHASES_DISABLED") {
+        setError("Este estudio no está aceptando compras en este momento.");
+      } else {
+        setError(errorMessage(caught));
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <main className="mx-auto max-w-3xl px-5 pt-10">
+      <h1 className="font-display text-4xl text-fg">Tu carrito</h1>
+      {cart.count === 0 ? (
+        <p className="mt-6 text-fg-dim">
+          Está vacío.{" "}
+          <Link to="/" className="text-accent-soft underline">
+            Ver galerías
+          </Link>
+        </p>
+      ) : (
+        <>
+          <ul className="mt-6 divide-y divide-line rounded-ui border border-line">
+            {cart.items.map((item) => (
+              <li key={item.id} className="flex items-center gap-4 p-3">
+                {item.thumbUrl ? (
+                  <img src={item.thumbUrl} alt="" className="size-16 rounded-ui object-cover" />
+                ) : (
+                  <div className="size-16 rounded-ui bg-raised" />
+                )}
+                <div className="flex-1 text-sm">
+                  <p className="text-fg">
+                    {item.type === "album" ? `Galería completa: ${item.title}` : item.title}
+                  </p>
+                  {cart.isCovered(item) ? (
+                    <p className="text-xs text-ok">Incluida en la galería del carrito</p>
+                  ) : null}
+                </div>
+                <span className="text-sm">
+                  {cart.isCovered(item) ? "—" : formatMoney(item.priceCents)}
+                </span>
+                <button
+                  type="button"
+                  className="text-xs text-fg-dim hover:text-danger"
+                  onClick={() => cart.remove(item.id)}
+                >
+                  Quitar
+                </button>
+              </li>
+            ))}
+            <li className="flex justify-between p-3 font-medium">
+              <span>Total</span>
+              <span>{formatMoney(cart.totalCents)}</span>
+            </li>
+          </ul>
+
+          {data.store.purchasesEnabled ? (
+            <form
+              onSubmit={(event) => void checkout(event)}
+              className="mt-8 space-y-4 rounded-ui border border-line bg-surface p-5"
+            >
+              <h2 className="font-display text-xl">Tus datos</h2>
+              <p className="text-sm text-fg-dim">
+                Te enviamos por email los datos para pagar. Cuando el estudio confirme el pago, vas
+                a poder descargar las fotos en alta resolución.
+              </p>
+              <input
+                required
+                minLength={2}
+                placeholder="Nombre y apellido"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full border-0 border-b border-line bg-raised px-3 py-2 focus:border-accent focus:outline-none"
+              />
+              <input
+                required
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full border-0 border-b border-line bg-raised px-3 py-2 focus:border-accent focus:outline-none"
+              />
+              {error ? (
+                <p role="alert" className="text-sm text-danger">
+                  {error}
+                </p>
+              ) : null}
+              <button
+                type="submit"
+                disabled={busy}
+                className="w-full rounded-ui bg-accent px-5 py-3 font-medium text-void hover:bg-accent-soft disabled:opacity-50"
+              >
+                {busy ? "Enviando…" : `Confirmar pedido · ${formatMoney(cart.totalCents)}`}
+              </button>
+            </form>
+          ) : (
+            <p className="mt-6 text-sm text-fg-dim">
+              Este estudio no está aceptando compras en este momento.
+            </p>
+          )}
+        </>
+      )}
+    </main>
+  );
+}
+
+function OrderPage() {
+  const { orderId = "" } = useParams();
+  const [params] = useSearchParams();
+  const token = params.get("token") ?? "";
+  const isNew = params.get("nuevo") === "1";
+  const order = useLoad(() => shopApi.order(orderId, token), [orderId, token]);
+
+  if (order.loading) return <Loading />;
+  if (order.error || !order.data) {
+    return (
+      <Notice title="Pedido no encontrado">
+        Revisá que el enlace esté completo, tal como te llegó por email.
+      </Notice>
+    );
+  }
+  const { order: info, items, downloads } = order.data;
+
+  return (
+    <main className="mx-auto max-w-3xl px-5 pt-10">
+      <p className="font-mono text-xs uppercase tracking-[0.3em] text-accent">Pedido {info.code}</p>
+      <h1 className="mt-2 font-display text-4xl text-fg">
+        {info.status === "paid"
+          ? "Tus fotos están listas"
+          : info.status === "cancelled"
+            ? "Pedido cancelado"
+            : isNew
+              ? "¡Gracias por tu pedido!"
+              : "Esperando el pago"}
+      </h1>
+
+      {info.status === "pending_payment" ? (
+        <div className="mt-6 space-y-4 rounded-ui border border-accent/40 bg-surface p-5">
+          <p className="text-fg-muted">
+            Total a pagar:{" "}
+            <strong className="text-fg">{formatMoney(info.totalCents, info.currency)}</strong>
+          </p>
+          <div>
+            <p className="mb-1 font-mono text-xs uppercase tracking-wider text-fg-dim">
+              Cómo pagar
+            </p>
+            <p className="whitespace-pre-line text-fg">
+              {info.paymentInstructions || "El estudio te va a contactar con los datos de pago."}
+            </p>
+          </div>
+          <p className="text-sm text-fg-dim">
+            Te mandamos esta información por email. Cuando el estudio confirme el pago, vas a
+            recibir otro email y en esta misma página aparecerán tus descargas.
+          </p>
+        </div>
+      ) : null}
+
+      {info.status === "paid" ? (
+        <ul className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3">
+          {downloads.map((download) => (
+            <li
+              key={download.photoId}
+              className="overflow-hidden rounded-ui border border-line bg-surface"
+            >
+              <img
+                src={download.thumbUrl}
+                alt={download.title}
+                className="aspect-square w-full object-cover"
+                loading="lazy"
+              />
+              <a
+                href={shopApi.downloadUrl(info.id, download.photoId, token)}
+                className="block px-3 py-2 text-center font-mono text-xs uppercase tracking-wider text-accent hover:bg-raised"
+              >
+                Descargar
+              </a>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      <ul className="mt-8 divide-y divide-line rounded-ui border border-line text-sm">
+        {items.map((item) => (
+          <li
+            key={`${item.kind}-${item.title}-${item.priceCents}`}
+            className="flex justify-between p-3"
+          >
+            <span>{item.kind === "album" ? `Galería completa: ${item.title}` : item.title}</span>
+            <span>{formatMoney(item.priceCents, info.currency)}</span>
+          </li>
+        ))}
+        <li className="flex justify-between p-3 font-medium">
+          <span>Total</span>
+          <span>{formatMoney(info.totalCents, info.currency)}</span>
+        </li>
+      </ul>
+      <p className="mt-4 text-xs text-fg-dim">
+        Guardá el enlace de esta página: es tu acceso a las fotos.
+      </p>
+    </main>
+  );
+}
+
+function StorefrontRoutes() {
+  const storefront = useLoad(() => shopApi.storefront(), []);
+
+  useEffect(() => {
+    if (storefront.data) document.title = storefront.data.content.displayName;
+  }, [storefront.data]);
+
+  if (storefront.loading) return <Loading />;
+  if (storefront.error || !storefront.data) {
+    // Order links must keep working even if the storefront is hidden later.
+    if (window.location.pathname.startsWith("/pedido/")) {
+      return (
+        <Routes>
+          <Route path="/pedido/:orderId" element={<OrderPage />} />
+        </Routes>
+      );
+    }
+    return <Notice title="Próximamente">Este estudio todavía está preparando su vitrina.</Notice>;
+  }
+
+  const data = storefront.data;
+  return (
+    <Shell data={data}>
+      <Routes>
+        <Route path="/" element={<HomePage data={data} />} />
+        <Route
+          path="/galeria/:albumId"
+          element={<AlbumView purchasesEnabled={data.store.purchasesEnabled} />}
+        />
+        <Route path="/carrito" element={<CartPage data={data} />} />
+        <Route path="/pedido/:orderId" element={<OrderPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Shell>
+  );
+}
+
+export function StorefrontApp() {
+  return (
+    <BrowserRouter>
+      <CartProvider>
+        <StorefrontRoutes />
+      </CartProvider>
+    </BrowserRouter>
+  );
+}

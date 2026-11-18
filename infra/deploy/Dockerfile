@@ -33,7 +33,12 @@ FROM scratch AS web
 COPY --from=build-web /repo/frontend/dist /
 
 FROM node:22-slim AS api
-ENV NODE_ENV=production
+ENV NODE_ENV=production MEDIA_ROOT=/data/media
+# Fonts are needed to render the text watermark on previews.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends fonts-dejavu-core fontconfig \
+ && rm -rf /var/lib/apt/lists/* \
+ && mkdir -p /data/media && chown node:node /data/media
 WORKDIR /app
 COPY --from=build-api --chown=node:node /out /app
 USER node

@@ -30,6 +30,8 @@ type RequestOptions = {
   body?: unknown;
   /** Send the access token and retry once after refreshing it on a 401. Default: true. */
   auth?: boolean;
+  /** Multipart body (file uploads). The browser sets the boundary header. */
+  formData?: FormData;
 };
 
 export type ApiClientOptions = {
@@ -58,9 +60,11 @@ export function createApiClient(options: ApiClientOptions = {}) {
     token: string | null,
   ): Promise<Response> {
     const headers: Record<string, string> = { Accept: "application/json" };
-    let body: string | undefined;
+    let body: string | FormData | undefined;
 
-    if (requestOptions.body !== undefined) {
+    if (requestOptions.formData) {
+      body = requestOptions.formData;
+    } else if (requestOptions.body !== undefined) {
       headers["Content-Type"] = "application/json";
       body = JSON.stringify(requestOptions.body);
     }
@@ -170,6 +174,13 @@ export function createApiClient(options: ApiClientOptions = {}) {
       request<T>("POST", path, { ...requestOptions, body }),
     patch: <T>(path: string, body?: unknown, requestOptions?: RequestOptions) =>
       request<T>("PATCH", path, { ...requestOptions, body }),
+    put: <T>(path: string, body?: unknown, requestOptions?: RequestOptions) =>
+      request<T>("PUT", path, { ...requestOptions, body }),
+    upload: <T>(path: string, file: File, requestOptions?: RequestOptions) => {
+      const formData = new FormData();
+      formData.append("file", file, file.name);
+      return request<T>("POST", path, { ...requestOptions, formData });
+    },
     delete: <T>(path: string, requestOptions?: RequestOptions) =>
       request<T>("DELETE", path, requestOptions),
     refreshSession,
