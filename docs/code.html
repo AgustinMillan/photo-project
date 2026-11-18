@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+
+<html class="bg-[#080b12]" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_tab" name="shell-type"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600&amp;family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&amp;family=Space+Grotesk:wght@400;500;600&amp;family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{width:100%;margin:0;padding:0;background-color:#080b12;color:#f0f6fc;-webkit-font-smoothing:antialiased;}body{overscroll-behavior-y:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script><script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+          "surface-container-high": "#1e293b",
+          "background": "#080b12",
+          "on-primary": "#00354a",
+          "secondary-fixed-dim": "#bcc6e3",
+          "tertiary-fixed-dim": "#7bd1fa",
+          "outline-variant": "#243352",
+          "secondary": "#94a3b8",
+          "tertiary-fixed": "#c0e8ff",
+          "surface-container-lowest": "#06080e",
+          "on-error": "#690005",
+          "on-secondary-fixed-variant": "#3d465e",
+          "primary-fixed-dim": "#7bd0ff",
+          "on-background": "#f0f6fc",
+          "primary-container": "#38bdf8",
+          "on-primary-fixed-variant": "#004c69",
+          "on-error-container": "#ffdad6",
+          "on-surface-variant": "#cbd5e1",
+          "on-tertiary": "#003547",
+          "outline": "#334155",
+          "tertiary": "#83d7ff",
+          "on-secondary": "#263047",
+          "surface-container-low": "#0d131f",
+          "inverse-on-surface": "#2d3038",
+          "secondary-fixed": "#d9e2ff",
+          "primary-fixed": "#c4e7ff",
+          "surface-tint": "#38bdf8",
+          "inverse-surface": "#e0e2ed",
+          "on-primary-fixed": "#001e2c",
+          "tertiary-container": "#64bbe3",
+          "primary": "#38bdf8",
+          "error": "#ffb4ab",
+          "surface-container": "#131b2e",
+          "on-tertiary-fixed-variant": "#004d66",
+          "on-secondary-fixed": "#111b31",
+          "surface-variant": "#182238",
+          "on-primary-container": "#004965",
+          "surface": "#080b12",
+          "surface-bright": "#222f46",
+          "surface-container-highest": "#1e293b",
+          "on-tertiary-fixed": "#001e2b",
+          "on-tertiary-container": "#004961",
+          "error-container": "#93000a",
+          "surface-dim": "#080b12",
+          "secondary-container": "#182238",
+          "on-surface": "#f0f6fc",
+          "inverse-primary": "#00668a",
+          "on-secondary-container": "#aeb8d4"
+        },
+        "borderRadius": {
+          "DEFAULT": "0.125rem",
+          "lg": "0.25rem",
+          "xl": "0.5rem",
+          "full": "0.75rem"
+        },
+        "spacing": {
+          "margin": "1.5rem",
+          "space-xl": "4rem",
+          "space-lg": "2rem",
+          "gutter-mobile": "1rem",
+          "space-md": "1rem",
+          "space-sm": "0.5rem",
+          "space-xs": "0.25rem",
+          "margin-mobile": "1.25rem",
+          "gutter": "1.5rem"
+        },
+        "fontFamily": {
+          "label-sm": ["Space Grotesk"],
+          "display-lg": ["Playfair Display"],
+          "headline-sm": ["Playfair Display"],
+          "display-lg-mobile": ["Playfair Display"],
+          "body-md": ["Plus Jakarta Sans"],
+          "headline-md": ["Playfair Display"],
+          "headline-lg-mobile": ["Playfair Display"],
+          "label-md": ["Space Grotesk"],
+          "headline-lg": ["Playfair Display"],
+          "body-lg": ["Plus Jakarta Sans"],
+          "body-sm": ["Plus Jakarta Sans"]
+        },
+        "fontSize": {
+          "label-sm": ["0.6875rem", { "lineHeight": "0.875rem", "letterSpacing": "0.12em", "fontWeight": "500" }],
+          "display-lg": ["4.5rem", { "lineHeight": "5rem", "letterSpacing": "-0.02em", "fontWeight": "400" }],
+          "headline-sm": ["1.5rem", { "lineHeight": "2rem", "letterSpacing": "0em", "fontWeight": "500" }],
+          "display-lg-mobile": ["2.75rem", { "lineHeight": "3.25rem", "letterSpacing": "-0.01em", "fontWeight": "400" }],
+          "body-md": ["1rem", { "lineHeight": "1.625rem", "letterSpacing": "0.01em", "fontWeight": "300" }],
+          "headline-md": ["2rem", { "lineHeight": "2.5rem", "letterSpacing": "-0.01em", "fontWeight": "400" }],
+          "headline-lg-mobile": ["2rem", { "lineHeight": "2.5rem", "letterSpacing": "0em", "fontWeight": "400" }],
+          "label-md": ["0.8125rem", { "lineHeight": "1rem", "letterSpacing": "0.08em", "fontWeight": "500" }],
+          "headline-lg": ["3rem", { "lineHeight": "3.5rem", "letterSpacing": "-0.015em", "fontWeight": "400" }],
+          "body-lg": ["1.125rem", { "lineHeight": "1.875rem", "letterSpacing": "0.01em", "fontWeight": "300" }],
+          "body-sm": ["0.875rem", { "lineHeight": "1.375rem", "letterSpacing": "0.015em", "fontWeight": "400" }]
+        }
+      }
+    }
+  }
+</script><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head><body class="bg-[#080b12] font-body-md text-[#f0f6fc] antialiased min-h-screen flex flex-col"><header class="fixed top-0 w-full z-50 pt-safe bg-[#080b12]/90 backdrop-blur-xl border-b border-[#243352]/50 shadow-[0_1px_12px_rgba(0,0,0,0.5)]"><div class="h-16 px-gutter flex items-center justify-between"><div class="flex items-center gap-space-sm"><img alt="Éléna Vance Brand Wordmark" class="h-8 w-auto object-contain brightness-0 invert opacity-95" src="https://lh3.googleusercontent.com/aida/ALJJyrDZHmpDMY9subNVqz0U8HaV1pFadDZkIYaHzPaE6pD39O8fM9pCLnimi9EYM5sRPw_2ITnYMLB_js3NpJgCKrgDJtDInzd4qaEiwppcOGBZdf5DRGaQByuk0hMeW65hZi7dZ4y5J9SbJYEDyYqgwiZQU6EvrMK2KBlp6Xo7GETvAQiuXO6-y-xsH5PnHio0eWQ1M4nRGBghBHDg4yiO4O6MfH4tZesHdzFtsP-mh2Cd"/><span class="font-headline-sm text-headline-sm tracking-tight text-[#f0f6fc] ml-space-xs hidden sm:inline">Éléna Vance</span><span class="font-label-sm text-label-sm uppercase tracking-widest text-[#38bdf8] ml-space-xs font-semibold">Folio</span></div><div class="flex items-center gap-space-xs"><span class="font-headline-sm text-headline-sm text-[#f0f6fc] sr-only">Home</span><a class="relative min-w-[44px] min-h-[44px] flex items-center justify-center text-[#cbd5e1] hover:text-[#38bdf8] transition-colors" data-path="cart" href="#"><span class="material-symbols-outlined text-[20px]">shopping_bag</span><span class="absolute top-2 right-1 w-4 h-4 rounded-full bg-[#38bdf8] text-[#00354a] font-label-sm text-[9px] font-bold flex items-center justify-center leading-none">2</span></a><div class="w-px h-4 bg-[#243352] mx-1"></div><img alt="Profile" class="w-8 h-8 rounded-full object-cover ml-space-xs ring-1 ring-[#38bdf8]/40" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB4psYkZqltZlQIXOZHbl0hg6EYFCD8zLa8KtBjrn8vGoqCEEyxg4Zyym2avrcphSNk7B15HRASRj2V2s2RMJrrKyjRaLtCQ1J04Fm-XNGndYcuP2T4Yov7MHuxgjQFWTvoLIRHQIliwFwQYIaECawRKptm8V-2NRHq4szn9YH4QMPPb4T5Zlo1IbmbOJDeCCZNuFwAhSZUNw2C9Eh0mdVmhiP7IyV1Uot_8dwb9Rc"/></div></div></header><main class="flex-1 flex flex-col relative w-full pt-16 pb-24 bg-[#080b12]"><div class="flex flex-col w-full text-[#f0f6fc]">
+<!-- 1. Hero Section -->
+<section class="relative w-full overflow-hidden bg-[#0d131f]">
+<div class="relative w-full h-[580px] flex flex-col justify-end p-gutter">
+<!-- Full-bleed artistic photographic plate -->
+<div class="absolute inset-0 bg-cover bg-center" data-alt="Monochromatic minimalist architectural fine art photography of stark angular concrete walls intersecting with dramatic soft morning shadows and coastal mist. Subtle warm bone and charcoal tones, ethereal high-end gallery aesthetic, shot on medium format analog film with organic fine grain, editorial Kinfolk aesthetic." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBJYyY83W8eM6mKAP8sPaYYGnCjkFcDI-xzhuZrC5ZOOK7yjivsSryP0KZlp6XfOx1eMeC72JXnkj_V1z_csTIzNdyTZa3vLlwPfxZbC2Yd1rfj0pe8hSwQHZ4ozZzw3pMBByyjeXnb1oYS3zc534jq_jJ_MgRva21V2elrXYmhBKECY0h2JvZQRhR40bENeA5YOtSWPk7_kkanU7KSYYpem7zbpvx5pDJWmnl48Gs')">
+</div>
+<!-- Editorial atmospheric scrim overlay with deep midnight indigo tint -->
+<div class="absolute inset-0 bg-gradient-to-t from-[#080b12] via-[#080b12]/75 to-[#080b12]/30"></div>
+<!-- Monograph Index Stamp (Delight detail) -->
+<div class="absolute top-6 left-gutter right-gutter flex items-center justify-between text-white/80">
+<span class="font-label-sm text-label-sm uppercase tracking-widest bg-[#0d131f]/75 border border-[#243352] text-[#7dd3fc] backdrop-blur-md px-2.5 py-1">Folio N° 24-B</span>
+<span class="font-label-sm text-label-sm uppercase tracking-widest text-[#94a3b8]">Paris / Kyoto</span>
+</div>
+<!-- Hero Content Plate -->
+<div class="relative z-10 flex flex-col gap-space-xs text-white pb-2">
+<p class="font-label-md text-label-md uppercase tracking-[0.2em] text-[#38bdf8] font-semibold">Curated Selection</p>
+<h1 class="font-display-md-mobile text-display-md-mobile text-[#f0f6fc] leading-tight font-normal">
+          Visual Poetry in Solitude
+        </h1>
+<p class="font-body-md text-body-md text-[#cbd5e1] max-w-sm mt-1">
+          Limited Fine Art Editions &amp; Archival Pigment Monograph Licenses.
+        </p>
+<!-- CTAs -->
+<div class="flex flex-col sm:flex-row gap-space-xs pt-space-sm mt-2">
+<a class="w-full sm:w-auto inline-flex items-center justify-center bg-[#38bdf8] text-[#00354a] font-semibold px-6 py-3.5 font-label-md text-label-md uppercase tracking-widest transition-all hover:bg-[#7dd3fc] active:scale-[0.99] shadow-lg shadow-[#38bdf8]/10" href="#series-gallery">
+            Explore Collections
+          </a>
+<a class="w-full sm:w-auto inline-flex items-center justify-center bg-transparent border border-[#243352] text-[#f0f6fc] px-6 py-3.5 font-label-md text-label-md uppercase tracking-widest hover:bg-[#182238] hover:border-[#38bdf8]/50 transition-colors" href="#inquiries-section">
+            Commission Works
+          </a>
+</div>
+</div>
+</div>
+</section>
+<!-- 2. Visual Identity & Introduction -->
+<section class="px-gutter pt-space-xl pb-space-lg bg-[#080b12]">
+<div class="flex flex-col gap-space-md">
+<!-- Monograph numbering indicator -->
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-[#38bdf8] shadow-[0_0_8px_#38bdf8]"></span>
+<span class="font-label-sm text-label-sm uppercase tracking-widest text-[#7dd3fc]">Prologue • Statement</span>
+</div>
+<!-- Quote Statement -->
+<blockquote class="font-headline-sm text-headline-sm text-[#f0f6fc] leading-snug italic font-normal">
+        “Observing the quiet tensions between raw landscapes and fleeting light. A visual dialogue in silence.”
+      </blockquote>
+<p class="font-body-md text-body-md text-[#94a3b8] leading-relaxed">
+        Based between Paris &amp; Kyoto. Éléna Vance examines human impermanence through slower medium format exposures, exploring how shadow preserves what sunlight swiftly erases.
+      </p>
+<!-- Editorial Artist Mat Board Preview Card -->
+<div class="mt-space-sm bg-[#0d131f] border border-[#243352] p-4 shadow-md">
+<div class="relative w-full aspect-[4/3] overflow-hidden bg-[#131b2e] border border-[#243352]/60">
+<img class="w-full h-full object-cover" data-alt="Editorial candid black and white portrait of photographer Éléna Vance in her sunlit Paris atelier inspecting analog 120mm black and white negative film strips with a brass magnifying loupe on a light table, serene, tactile art monograph ambiance, minimal aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDT_BPtZPWwaEhs3_r8REe759xzgJTOFWqO0Fn5-UAV5VTkEI48dkLiEwBhU6pN4h9AK8gQv7gZZ729_UJ5nhGROSQ5cUPFz5IZBR5vYE4fVya8MGRXSDpc-d56kCi2DMq7N5ZKCwRNrMM3gXdDfRDfH-2JVDVzV9gObilagiWHOzu7UjczvBfh0O13XgE7SukFwyqz72P5yfGT9X3o8MKImVx8ZPe2iQhkVqHEl2U"/>
+<div class="absolute bottom-3 left-3 bg-[#080b12]/80 border border-[#243352] backdrop-blur-sm text-[#cbd5e1] px-2 py-0.5 font-label-sm text-label-sm uppercase tracking-widest">
+            Atelier Light Table • 120mm Gelatin Negative
+          </div>
+</div>
+<div class="flex items-center justify-between pt-3 text-[#94a3b8]">
+<span class="font-label-sm text-label-sm uppercase tracking-widest text-[#cbd5e1]">Éléna Vance at Work</span>
+<span class="font-label-sm text-label-sm tracking-widest text-[#7dd3fc]">14 RUE DE TURENNE</span>
+</div>
+</div>
+</div>
+</section>
+<!-- 3. Featured Albums / Series Grid -->
+<section class="px-gutter py-space-lg bg-[#0d131f] border-y border-[#243352]/40" id="series-gallery">
+<div class="flex flex-col gap-space-md">
+<!-- Section Title & Meta Header -->
+<div class="flex items-end justify-between">
+<div>
+<span class="font-label-sm text-label-sm uppercase tracking-widest text-[#38bdf8]">Curated Works</span>
+<h2 class="font-headline-lg text-headline-lg text-[#f0f6fc] mt-0.5">Selected Series</h2>
+</div>
+<span class="font-label-md text-label-md uppercase tracking-wider text-[#94a3b8]">03 Portfolios</span>
+</div>
+<!-- Series 01: Nordic Silence -->
+<article class="bg-[#131b2e] border border-[#243352] p-space-md shadow-md transition-all hover:border-[#38bdf8]/40 active:scale-[0.995]">
+<div class="relative w-full aspect-[4/5] bg-[#0d131f] overflow-hidden border border-[#243352]/50">
+<img class="w-full h-full object-cover" data-alt="Minimalist fine art landscape photograph of solitary black basalt cliffs emerging from frozen Arctic fjord waters under soft overcast platinum sky. Subtle gradient of frost and charcoal mist, tactile silver gelatin monograph print style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAun_Q2a_0DrafslKuGX8nr9knxg9O_K9Z0Hg0S3NtDhuSsqMMf-CBn-uo40E5ZAhu7lyN84IZpKujimvDB8GA70RoSXf_xe4yAq6lAM_uu58AVkmahM5mouuZTXqfKjvrueTio4QkBFlY-TSrli58PP3wyBB3XiMs7L4nEGcs_HBYOmJeGbPl7fMBrEqLo7vN1J0HessmD9lqTodv27pbi-Ab59ixgI4OVy_jgOY0"/>
+<div class="absolute top-3 right-3 bg-[#080b12]/85 border border-[#243352] backdrop-blur-md px-2.5 py-1 text-[#7dd3fc] font-label-sm text-label-sm tracking-widest uppercase">
+            Edition of 15
+          </div>
+</div>
+<div class="pt-space-md flex flex-col gap-1.5">
+<div class="flex items-center justify-between text-[#94a3b8]">
+<span class="font-label-sm text-label-sm uppercase tracking-widest text-[#38bdf8]">Vol. I • 2024</span>
+<span class="font-label-sm text-label-sm uppercase tracking-widest">18 Plates</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-[#f0f6fc]">Nordic Silence</h3>
+<p class="font-body-md text-body-md text-[#94a3b8] line-clamp-2">
+            Stark sub-zero horizons captured across the Lofoten archipelago on expired medium format film stock.
+          </p>
+<div class="pt-2 flex items-center justify-between">
+<button class="inline-flex items-center gap-1.5 font-label-md text-label-md uppercase tracking-widest text-[#38bdf8] hover:text-[#7dd3fc] font-semibold group" onclick="toggleSeriesSheet('Nordic Silence', '18 Archival Works', 'Plates 01 to 18 captured across northern Norway with Hasselblad 503CW. Printed on 308gsm Hahnemühle Photo Rag.')">
+<span>View Series</span>
+<span class="material-symbols-outlined text-[16px] transition-transform group-hover:translate-x-1">arrow_forward</span>
+</button>
+<span class="font-label-sm text-label-sm text-[#cbd5e1] tracking-widest">From $950</span>
+</div>
+</div>
+</article>
+<!-- Series 02: Kyoto Shadows -->
+<article class="bg-[#131b2e] border border-[#243352] p-space-md shadow-md transition-all hover:border-[#38bdf8]/40 active:scale-[0.995]">
+<div class="relative w-full aspect-[4/5] bg-[#0d131f] overflow-hidden border border-[#243352]/50">
+<img class="w-full h-full object-cover" data-alt="Artistic architectural interior photograph in Kyoto of weathered charred cedar shoji screens cast with soft bamboo branch shadows in morning golden natural light. Warm umber, bone white, and ink black tones, quiet Japanese wabi-sabi atmosphere." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBDQjUpmWb9AlT6mKJiCwl-K3URtxu3GVwtIFFb7a6BLJtjOdnVFe26LgcpdfUI8cYFRa0z6OWE3KImYb77CQSy6vyh1fvyctLGcGH08poJZJ6ayRI-PJo1u6MHALGaRsxCtEytui2WBHcM2f4coIyCRnK1QOv3VWmp-Bd4Knjcf8ot05weKu5DhPbceijmsAZmGLreDpwvKn0ECc_7gfKUw9DdmMr3SVHRF4EA7Fk"/>
+<div class="absolute top-3 right-3 bg-[#080b12]/85 border border-[#243352] backdrop-blur-md px-2.5 py-1 text-[#7dd3fc] font-label-sm text-label-sm tracking-widest uppercase">
+            Edition of 10
+          </div>
+</div>
+<div class="pt-space-md flex flex-col gap-1.5">
+<div class="flex items-center justify-between text-[#94a3b8]">
+<span class="font-label-sm text-label-sm uppercase tracking-widest text-[#38bdf8]">Vol. II • 2023</span>
+<span class="font-label-sm text-label-sm uppercase tracking-widest">24 Plates</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-[#f0f6fc]">Kyoto Shadows</h3>
+<p class="font-body-md text-body-md text-[#94a3b8] line-clamp-2">
+            A study of cedar architecture, sliding screens, and meditative stillness within centuries-old machiya gardens.
+          </p>
+<div class="pt-2 flex items-center justify-between">
+<button class="inline-flex items-center gap-1.5 font-label-md text-label-md uppercase tracking-widest text-[#38bdf8] hover:text-[#7dd3fc] font-semibold group" onclick="toggleSeriesSheet('Kyoto Shadows', '24 Archival Works', 'Study of Japanese domestic architecture and paper screens across Arashiyama and Gion. Natural morning light only.')">
+<span>View Series</span>
+<span class="material-symbols-outlined text-[16px] transition-transform group-hover:translate-x-1">arrow_forward</span>
+</button>
+<span class="font-label-sm text-label-sm text-[#cbd5e1] tracking-widest">From $1,200</span>
+</div>
+</div>
+</article>
+<!-- Series 03: Terra Incognita -->
+<article class="bg-[#131b2e] border border-[#243352] p-space-md shadow-md transition-all hover:border-[#38bdf8]/40 active:scale-[0.995]">
+<div class="relative w-full aspect-[4/5] bg-[#0d131f] overflow-hidden border border-[#243352]/50">
+<img class="w-full h-full object-cover" data-alt="Dramatic high contrast black and white fine art photograph of volcanic black sand dunes meeting crashing ocean waves along an isolated Icelandic shoreline, mineral textures and dramatic atmospheric spray in monochrome." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDraXINrjaOPm-SzFUOFpevzU0OuOn1MtchH6OmTnL2Uanj3z6QTABk7wWI1IaCyPk7t3-1AXtZqv4g8YDPmdDZc-OBQPTlIOgxb7U9wuns-Oc5IXBwAWU2Ds8fXpRpvc1Cq5vR1wqAo0CvgO3JRgkthPlKIetYCJBhGBBcL24ua0GGiFADIdiZRj_wB4ZaKJp3naZLvbuDeMymfzrJ9WNUE-sBBc9YGuhPGl8uR60"/>
+<div class="absolute top-3 right-3 bg-[#080b12]/85 border border-[#243352] backdrop-blur-md px-2.5 py-1 text-[#7dd3fc] font-label-sm text-label-sm tracking-widest uppercase">
+            Edition of 12
+          </div>
+</div>
+<div class="pt-space-md flex flex-col gap-1.5">
+<div class="flex items-center justify-between text-[#94a3b8]">
+<span class="font-label-sm text-label-sm uppercase tracking-widest text-[#38bdf8]">Vol. III • 2024</span>
+<span class="font-label-sm text-label-sm uppercase tracking-widest">12 Plates</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-[#f0f6fc]">Terra Incognita</h3>
+<p class="font-body-md text-body-md text-[#94a3b8] line-clamp-2">
+            Mineral terrains, basalt plains, and tidal forces at the margins of the known geographic map.
+          </p>
+<div class="pt-2 flex items-center justify-between">
+<button class="inline-flex items-center gap-1.5 font-label-md text-label-md uppercase tracking-widest text-[#38bdf8] hover:text-[#7dd3fc] font-semibold group" onclick="toggleSeriesSheet('Terra Incognita', '12 Archival Works', 'Mineral and geological studies documented on 4x5 large format sheet film. Monograph publication upcoming fall.')">
+<span>View Series</span>
+<span class="material-symbols-outlined text-[16px] transition-transform group-hover:translate-x-1">arrow_forward</span>
+</button>
+<span class="font-label-sm text-label-sm text-[#cbd5e1] tracking-widest">From $1,450</span>
+</div>
+</div>
+</article>
+</div>
+</section>
+<!-- 4. About the Atelier Section -->
+<section class="px-gutter py-space-xl bg-[#080b12]">
+<div class="flex flex-col gap-space-md">
+<div>
+<span class="font-label-sm text-label-sm uppercase tracking-widest text-[#38bdf8]">Craft &amp; Authenticity</span>
+<h2 class="font-headline-lg text-headline-lg text-[#f0f6fc] mt-1">The Atelier Practice</h2>
+</div>
+<!-- Process Pill Bento Grid -->
+<div class="flex flex-col gap-space-xs">
+<div class="p-space-md bg-[#0d131f] border border-[#243352] flex flex-col gap-1">
+<div class="flex items-center gap-2 text-[#38bdf8]">
+<span class="material-symbols-outlined text-[20px]">camera_roll</span>
+<span class="font-label-md text-label-md uppercase tracking-widest font-semibold text-[#f0f6fc]">120mm • Medium Format</span>
+</div>
+<p class="font-body-md text-body-md text-[#94a3b8] mt-1">
+            Every exposure is measured by hand on manual mechanical cameras. Grain structures are physical chemical responses to light.
+          </p>
+</div>
+<div class="p-space-md bg-[#0d131f] border border-[#243352] flex flex-col gap-1">
+<div class="flex items-center gap-2 text-[#38bdf8]">
+<span class="material-symbols-outlined text-[20px]">brush</span>
+<span class="font-label-md text-label-md uppercase tracking-widest font-semibold text-[#f0f6fc]">Hahnemühle 308gsm Rag</span>
+</div>
+<p class="font-body-md text-body-md text-[#94a3b8] mt-1">
+            Printed using mineral-based carbon pigment inks on unbleached, 100% cotton archival paper certified for 100+ years lightfastness.
+          </p>
+</div>
+<div class="p-space-md bg-[#0d131f] border border-[#243352] flex flex-col gap-1">
+<div class="flex items-center gap-2 text-[#38bdf8]">
+<span class="material-symbols-outlined text-[20px]">verified</span>
+<span class="font-label-md text-label-md uppercase tracking-widest font-semibold text-[#f0f6fc]">Signed &amp; Numbered</span>
+</div>
+<p class="font-body-md text-body-md text-[#94a3b8] mt-1">
+            Accompanied by an embossed atelier wax certificate of authenticity with corresponding cryptographic monograph registry numbers.
+          </p>
+</div>
+</div>
+<!-- Studio Still Life Detail Image -->
+<div class="relative w-full h-52 bg-[#131b2e] border border-[#243352] overflow-hidden mt-space-xs">
+<img class="w-full h-full object-cover" data-alt="Tactile macro still life detail photograph of an archival Hahnemühle cotton paper print sheet showing embossed Éléna Vance artist seal, pencil signature, and darkroom test strip cards on natural wooden studio desk." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAZeG7dsI_AzDzGkucXycBjIk_W5DxGFUmAIUv-tEEAWc_BnrVPbt65J9pRSuFtBAXzmWwrMaUxi4Kv64fFnirX-X04_Z6pxuKS0lPcgQZQnP6XCtZapygHuHEhM7CAWVMjnaZfeleZKZgLBi2ypZZiE4Eu_t7fQ3gqiE39os7StnkDXWMeBNIzLTZNC8XOJOzDAvrSHrCcmQv19psujx_yH9bpLUt5iFSOiPYgBXI"/>
+<div class="absolute inset-0 bg-[#080b12]/30"></div>
+<div class="absolute bottom-3 left-4 right-4 flex items-center justify-between text-white">
+<span class="font-label-sm text-label-sm uppercase tracking-widest bg-[#080b12]/70 border border-[#243352] px-2 py-0.5 text-[#cbd5e1]">Hand-embossed seal</span>
+<span class="font-label-sm text-label-sm tracking-widest text-[#7dd3fc]">Paris Darkroom</span>
+</div>
+</div>
+</div>
+</section>
+<!-- 5. Inquiries & Contact Section -->
+<section class="px-gutter py-space-xl bg-[#0d131f] border-t border-[#243352]/40 text-[#f0f6fc]" id="inquiries-section">
+<div class="flex flex-col gap-space-md">
+<div>
+<span class="font-label-sm text-label-sm uppercase tracking-widest text-[#38bdf8]">Acquisitions &amp; Commissions</span>
+<h2 class="font-headline-lg text-headline-lg text-[#f0f6fc] mt-1">Liaison with the Atelier</h2>
+<p class="font-body-md text-body-md text-[#94a3b8] mt-2">
+          Private viewing appointments, architectural commissions, or bespoke framing consultations.
+        </p>
+</div>
+<!-- Quick Action Buttons -->
+<div class="flex flex-col gap-2.5 pt-1">
+<a class="flex items-center justify-between px-5 py-4 bg-[#38bdf8] text-[#00354a] font-label-md text-label-md font-semibold uppercase tracking-widest shadow-md hover:bg-[#7dd3fc] transition-colors" href="https://wa.me/33140298000" rel="noopener noreferrer" target="_blank">
+<span class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-[18px]">chat</span>
+<span>Direct WhatsApp Liaison</span>
+</span>
+<span class="material-symbols-outlined text-[16px]">north_east</span>
+</a>
+<a class="flex items-center justify-between px-5 py-4 bg-[#131b2e] border border-[#243352] text-[#f0f6fc] font-label-md text-label-md uppercase tracking-widest shadow-sm hover:border-[#38bdf8]/50 hover:bg-[#182238] transition-colors" href="mailto:atelier@elenavance.com?subject=Print%20Acquisition%20Inquiry">
+<span class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-[18px] text-[#38bdf8]">mail</span>
+<span>Email Atelier Concierge</span>
+</span>
+<span class="material-symbols-outlined text-[16px] text-[#94a3b8]">send</span>
+</a>
+</div>
+<!-- Studio Address Tile -->
+<div class="mt-2 p-space-md bg-[#131b2e] border border-[#243352] flex flex-col gap-2 shadow-sm">
+<div class="flex items-start justify-between">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm uppercase tracking-widest text-[#38bdf8]">Physical Atelier</span>
+<span class="font-headline-sm text-headline-sm text-[#f0f6fc] mt-0.5">Atelier Vance</span>
+</div>
+<span class="material-symbols-outlined text-[#38bdf8] text-[22px]">location_on</span>
+</div>
+<p class="font-body-md text-body-md text-[#94a3b8]">
+          14 Rue de Turenne, 75004 Paris, France<br/>
+          Open for private collectors by appointment only.
+        </p>
+<div class="pt-2">
+<a class="inline-flex items-center gap-1 font-label-sm text-label-sm uppercase tracking-widest text-[#38bdf8] hover:text-[#7dd3fc] font-semibold" href="https://maps.google.com" target="_blank">
+<span>View on Map</span>
+<span class="material-symbols-outlined text-[14px]">arrow_outward</span>
+</a>
+</div>
+</div>
+</div>
+</section>
+<!-- 6. Collector Dispatch & Newsletter -->
+<section class="px-gutter py-space-xl bg-[#080b12] border-t border-[#243352]/30">
+<div class="flex flex-col gap-space-md">
+<div>
+<span class="font-label-sm text-label-sm uppercase tracking-widest text-[#38bdf8]">Private Ledger</span>
+<h3 class="font-headline-sm text-headline-sm text-[#f0f6fc] mt-1">Collector Dispatches</h3>
+<p class="font-body-md text-body-md text-[#94a3b8] mt-1">
+          Receive notification 48 hours before public release of limited series drops and monograph monographs.
+        </p>
+</div>
+<!-- Minimalist Inline Form -->
+<form class="flex flex-col gap-3" onsubmit="handleDispatchSubscribe(event)">
+<div class="flex flex-col gap-1">
+<label class="font-label-sm text-label-sm uppercase tracking-widest text-[#cbd5e1]" for="collector-email">Collector Email</label>
+<input class="w-full bg-[#0d131f] border border-[#243352] py-3 text-body-md font-body-md text-[#f0f6fc] placeholder:text-[#94a3b8]/50 focus:outline-none focus:border-[#38bdf8] focus:bg-[#131b2e] transition-colors px-3 rounded-none" id="collector-email" placeholder="collector@domain.com" required="" type="email"/>
+</div>
+<button class="w-full py-3.5 bg-[#38bdf8] text-[#00354a] font-label-md text-label-md font-semibold uppercase tracking-widest hover:bg-[#7dd3fc] transition-colors shadow-md" type="submit">
+          Request Early Access
+        </button>
+</form>
+<p class="font-label-sm text-label-sm tracking-wide text-[#38bdf8] hidden" id="subscribe-feedback"></p>
+<!-- Collector Index Social Links -->
+<div class="pt-space-md flex flex-col gap-space-xs text-[#94a3b8]">
+<span class="font-label-sm text-label-sm uppercase tracking-widest text-[#f0f6fc]">External Folios</span>
+<div class="flex flex-wrap items-center gap-4 pt-1">
+<a class="font-label-md text-label-md uppercase tracking-wider text-[#cbd5e1] hover:text-[#38bdf8] transition-colors flex items-center gap-1" href="#">
+<span>Instagram</span>
+<span class="text-[10px] text-[#94a3b8]">@elenavance.atelier</span>
+</a>
+<span class="text-[#243352]">•</span>
+<a class="font-label-md text-label-md uppercase tracking-wider text-[#cbd5e1] hover:text-[#38bdf8] transition-colors" href="#">Artsy</a>
+<span class="text-[#243352]">•</span>
+<a class="font-label-md text-label-md uppercase tracking-wider text-[#cbd5e1] hover:text-[#38bdf8] transition-colors" href="#">Substack</a>
+</div>
+</div>
+</div>
+</section>
+<!-- Interactive Slide-out Series Inspector Drawer -->
+<div class="fixed inset-0 z-50 pointer-events-none transition-opacity duration-300 opacity-0 flex justify-end" id="series-sheet">
+<div class="absolute inset-0 bg-[#080b12]/80 backdrop-blur-sm pointer-events-auto" id="series-backdrop" onclick="closeSeriesSheet()"></div>
+<div class="relative w-full max-w-sm h-full bg-[#0d131f] border-l border-[#243352] p-gutter flex flex-col justify-between overflow-y-auto pointer-events-auto transition-transform duration-300 translate-x-full">
+<div class="flex flex-col gap-space-md">
+<div class="flex items-center justify-between pt-2">
+<span class="font-label-sm text-label-sm uppercase tracking-widest text-[#38bdf8]">Folio Inspector</span>
+<button class="p-2 text-[#cbd5e1] hover:text-[#f0f6fc]" onclick="closeSeriesSheet()">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+<div class="flex flex-col gap-1">
+<h3 class="font-headline-sm text-headline-sm text-[#f0f6fc]" id="sheet-title">Series Title</h3>
+<span class="font-label-md text-label-md uppercase tracking-widest text-[#7dd3fc]" id="sheet-count">00 Plates</span>
+</div>
+<p class="font-body-md text-body-md text-[#94a3b8] leading-relaxed" id="sheet-desc">
+          Series details will load here.
+        </p>
+<!-- Preview Plate -->
+<div class="relative w-full aspect-square bg-[#131b2e] border border-[#243352] overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Monochrome contact sheet preview of 120mm medium format gelatin silver photography frames with grease pencil crop marks and photographer notes." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDs7q-fUZ0u3a6pCzkvz0ZCaeM_IXS6SSGzur2Z4lTVYe6ZeWA0kFHLvNlJO_5UoR-ecuGKPM15Ra228JziXuGUoY5MwxPHre6y76w4-Zd7zBmljpNSciVNmcVc04X0q_LXd0WVik4fG9IqVoQGFAEj6E5QGBpmM4a36F2NKHFdwl_koEsfOv7098u9McRznnvNkOsVzbQPnlYV3wTk8TO_VE1SVy0MYUrMmQpYHUs"/>
+</div>
+<div class="p-3 bg-[#131b2e] border border-[#243352] text-[#cbd5e1] text-body-md flex flex-col gap-1">
+<span class="font-label-sm text-label-sm uppercase tracking-widest text-[#38bdf8]">Archival Specifications</span>
+<span>Pigment Print on Hahnemühle 308gsm</span>
+<span>Numbered Monograph Certificate</span>
+</div>
+</div>
+<div class="pt-6 flex flex-col gap-2">
+<button class="w-full py-3.5 bg-[#38bdf8] text-[#00354a] font-label-md text-label-md uppercase tracking-widest font-semibold hover:bg-[#7dd3fc] transition-colors" onclick="closeSeriesSheet()">
+          Inquire This Series
+        </button>
+<button class="w-full py-2.5 font-label-sm text-label-sm uppercase tracking-widest text-[#94a3b8] hover:text-[#f0f6fc] transition-colors" onclick="closeSeriesSheet()">
+          Dismiss
+        </button>
+</div>
+</div>
+</div>
+<script>
+    function toggleSeriesSheet(title, count, desc) {
+      const sheet = document.getElementById('series-sheet');
+      const drawer = sheet.querySelector('.max-w-sm');
+      document.getElementById('sheet-title').innerText = title;
+      document.getElementById('sheet-count').innerText = count;
+      document.getElementById('sheet-desc').innerText = desc;
+
+      sheet.classList.remove('pointer-events-none', 'opacity-0');
+      sheet.classList.add('opacity-100');
+      drawer.classList.remove('translate-x-full');
+      drawer.classList.add('translate-x-0');
+    }
+
+    function closeSeriesSheet() {
+      const sheet = document.getElementById('series-sheet');
+      const drawer = sheet.querySelector('.max-w-sm');
+
+      drawer.classList.remove('translate-x-0');
+      drawer.classList.add('translate-x-full');
+      sheet.classList.remove('opacity-100');
+      sheet.classList.add('opacity-0');
+      setTimeout(() => {
+        sheet.classList.add('pointer-events-none');
+      }, 300);
+    }
+
+    function handleDispatchSubscribe(e) {
+      e.preventDefault();
+      const email = document.getElementById('collector-email').value;
+      const feedback = document.getElementById('subscribe-feedback');
+      if (email) {
+        feedback.innerText = 'Inscription recorded. Welcome to the private ledger.';
+        feedback.classList.remove('hidden');
+        document.getElementById('collector-email').value = '';
+        setTimeout(() => {
+          feedback.classList.add('hidden');
+        }, 5000);
+      }
+    }
+  </script>
+</div><footer class="mt-space-xl px-gutter py-space-lg bg-[#0d131f] border-t border-[#243352]/40 text-[#f0f6fc]"><div class="flex flex-col gap-space-md"><div class="flex items-center justify-between"><span class="font-headline-sm text-headline-sm text-[#f0f6fc]">Éléna Vance</span><span class="font-label-sm text-label-sm uppercase tracking-widest text-[#7dd3fc]">Paris • New York</span></div><p class="font-body-md text-body-md text-[#94a3b8] max-w-xs">Limited photographic monographs and gelatin silver archival prints.</p><div class="flex flex-wrap items-center gap-x-space-md gap-y-space-xs pt-space-xs"><a class="font-label-md text-label-md uppercase tracking-wider text-[#cbd5e1] hover:text-[#38bdf8] transition-colors" href="#">Instagram</a><a class="font-label-md text-label-md uppercase tracking-wider text-[#cbd5e1] hover:text-[#38bdf8] transition-colors" href="#">Substack</a><a class="font-label-md text-label-md uppercase tracking-wider text-[#cbd5e1] hover:text-[#38bdf8] transition-colors" href="#">WhatsApp</a><a class="font-label-md text-label-md uppercase tracking-wider text-[#cbd5e1] hover:text-[#38bdf8] transition-colors" href="#">Atelier</a></div><div class="pt-space-sm flex justify-between items-center"><span class="font-label-sm text-label-sm text-[#94a3b8]">© Éléna Vance Edition. All Rights Reserved.</span></div></div></footer></main><nav class="fixed bottom-0 w-full z-50 pb-safe bg-[#080b12]/90 backdrop-blur-xl border-t border-[#243352]/50 shadow-[0_-2px_16px_rgba(0,0,0,0.6)]" data-active-classes="text-[#38bdf8] font-semibold"><div class="flex justify-around items-center h-16 px-gutter max-w-md mx-auto"><a aria-current="page" class="flex flex-col items-center justify-center gap-0.5 min-w-[44px] min-h-[44px] transition-colors text-[#38bdf8] font-semibold" data-path="home" href="#"><span class="material-symbols-outlined text-[20px] drop-shadow-[0_0_8px_rgba(56,189,248,0.5)]">chair</span><span class="font-label-sm text-label-sm uppercase tracking-widest">Home</span></a><a class="flex flex-col items-center justify-center gap-0.5 min-w-[44px] min-h-[44px] text-[#94a3b8] hover:text-[#38bdf8] transition-colors" data-path="albums" href="#"><span class="material-symbols-outlined text-[20px]">auto_stories</span><span class="font-label-sm text-label-sm uppercase tracking-widest">Albums</span></a><a class="flex flex-col items-center justify-center gap-0.5 min-w-[44px] min-h-[44px] text-[#94a3b8] hover:text-[#38bdf8] transition-colors" data-path="gallery" href="#"><span class="material-symbols-outlined text-[20px]">filter_frames</span><span class="font-label-sm text-label-sm uppercase tracking-widest">Gallery</span></a><a class="flex flex-col items-center justify-center gap-0.5 min-w-[44px] min-h-[44px] text-[#94a3b8] hover:text-[#38bdf8] transition-colors" data-path="cart" href="#"><span class="material-symbols-outlined text-[20px]">shopping_bag</span><span class="font-label-sm text-label-sm uppercase tracking-widest">Bag (2)</span></a></div></nav></body></html>

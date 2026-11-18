@@ -1,0 +1,38 @@
+name: photo-platform
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: photo-platform-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: photo_platform
+      POSTGRES_PASSWORD: photo_platform_dev
+      POSTGRES_DB: photo_platform
+      TZ: UTC
+    ports:
+      - "5432:5432"
+    volumes:
+      - photo_platform_pgdata:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U photo_platform -d photo_platform"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: photo-platform-mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    environment:
+      MP_MAX_MESSAGES: 500
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+
+volumes:
+  photo_platform_pgdata:

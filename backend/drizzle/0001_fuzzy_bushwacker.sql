@@ -1,0 +1,1 @@
+ALTER TABLE "stores" ADD CONSTRAINT "stores_slug_format_check" CHECK ("stores"."slug" ~ '^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$' and "stores"."slug" !~ '--');
