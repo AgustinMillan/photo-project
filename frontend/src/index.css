@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+/* Nocturne Cyanotype — tokens from docs/DESIGN.md. danger/ok are additions for form feedback. */
+@theme {
+  --color-void: #080b12;
+  --color-surface: #0d131f;
+  --color-raised: #131b2e;
+  --color-overlay: #1a243a;
+  --color-accent: #38bdf8;
+  --color-accent-soft: #7dd3fc;
+  --color-line: #243352;
+  --color-fg: #f0f6fc;
+  --color-fg-muted: #cbd5e1;
+  --color-fg-dim: #94a3b8;
+  --color-danger: #f87171;
+  --color-ok: #4ade80;
+  --font-display: "Playfair Display", Georgia, serif;
+  --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-mono: "Space Grotesk", ui-monospace, monospace;
+  --radius-ui: 4px;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  background: var(--color-void);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
