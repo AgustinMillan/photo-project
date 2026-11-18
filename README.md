@@ -28,7 +28,7 @@ El proyecto está en **Fase 2 (Suscripciones y entitlements)**, construido por i
 │   │   └── shared/          Errores, logging y utilidades HTTP
 │   └── test/                Pruebas unitarias e integración
 ├── docs/                    Producto, arquitectura, plan, ERD y ADRs
-├── frontend/                Reservado para la UI (se incorpora al estabilizar la API)
+├── frontend/                Panel del fotógrafo (React 19 + Vite + Tailwind v4)
 └── infra/                   Docker Compose y scripts de PostgreSQL
 ```
 
@@ -131,7 +131,7 @@ Esto borra el volumen local. No usarlo contra datos que se quieran conservar.
 
 Se adoptó **JWT access + refresh rotativo**. El access token es de corta duración (15 minutos por defecto) y se envía en `Authorization: Bearer`; el refresh token es opaco, se guarda hasheado en `user_sessions` y viaja en una cookie `HttpOnly` con `SameSite=Lax`, limitada a `/api/v1/auth`. La rotación y la detección de reutilización están documentadas en el ADR.
 
-Los usuarios deben verificar su email antes de poder iniciar sesión. Los emails de desarrollo se capturan en Mailpit (`http://localhost:8025`). Los enlaces usan `APP_URL` y apuntan a `/verify-email?token=...` y `/reset-password?token=...`; el frontend deberá llamar a los endpoints correspondientes con ese token.
+Los usuarios deben verificar su email antes de poder iniciar sesión. Los emails de desarrollo se capturan en Mailpit (`http://localhost:8025`). Los enlaces usan `APP_URL` y apuntan a `/verify-email?token=...` y `/reset-password?token=...`; el frontend (`frontend/`) llama a los endpoints correspondientes con ese token.
 
 ### Endpoints
 
@@ -261,3 +261,20 @@ Completado en Fase 2:
 - Pruebas unitarias e integración de límites, trial, expiración y compras.
 
 Fase 2 completa. Siguiente: **Fase 3 — Storefront y configuración**.
+
+## Frontend (panel del fotógrafo)
+
+React 19 + Vite + TypeScript + Tailwind v4, con los tokens "Nocturne Cyanotype" de `docs/DESIGN.md`. Consume la API existente; no agrega endpoints.
+
+```bash
+pnpm install
+pnpm infra:up && pnpm db:migrate     # PostgreSQL + Mailpit
+pnpm dev                             # API en http://localhost:3000
+pnpm dev:web                         # UI en http://localhost:5173
+```
+
+- Vite hace proxy de `/api` hacia la API (`VITE_API_TARGET`), sin cambiar el `Host`; `CORS_ORIGIN` debe incluir el origen de la UI (por defecto `http://localhost:5173`).
+- El access token vive solo en memoria; la sesión se recupera con el refresh token (cookie HttpOnly) al cargar.
+- Pantallas: registro, verificación de email, login, recuperación y restablecimiento de contraseña, onboarding (cuenta + primera tienda), aceptar invitación, resumen, equipo e invitaciones, plan/entitlements y ajustes de cuenta y tienda.
+- Un hostname `<slug>.<VITE_PLATFORM_DOMAIN>` muestra la vitrina pública (placeholder) en lugar del panel. Ejemplo: `http://mi-estudio.localhost:5173`.
+- Scripts: `pnpm web:lint`, `pnpm web:typecheck`, `pnpm web:test`, `pnpm web:build`.
