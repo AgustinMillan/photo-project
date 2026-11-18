@@ -27,7 +27,10 @@ const METHODS: Record<PaymentMethod, string> = {
   transfer: "Transferencia",
   cash: "Efectivo",
   other: "Otro",
+  mercadopago: "Mercado Pago",
 };
+
+const MANUAL_METHODS = ["transfer", "cash", "other"] as const;
 
 function OrderDetailPanel({
   storeId,
@@ -174,6 +177,12 @@ function OrderDetailPanel({
           onSubmit={(event) => void record(event)}
           className="space-y-3 rounded-ui border border-line p-4"
         >
+          {order.checkoutMethod === "mercadopago" ? (
+            <p className="text-sm text-fg-dim">
+              El cliente eligió Mercado Pago: el pedido se confirma solo cuando se aprueba el pago.
+              Usá esto solo si te pagó por otro medio.
+            </p>
+          ) : null}
           <p className="text-sm text-fg-muted">
             Cuando recibas el dinero, registralo acá. Las descargas se habilitan cuando lo pagado
             cubre el total ({formatMoney(remaining)} pendiente).
@@ -191,9 +200,9 @@ function OrderDetailPanel({
               value={method}
               onChange={(e) => setMethod(e.target.value as PaymentMethod)}
             >
-              {Object.entries(METHODS).map(([value, label]) => (
+              {MANUAL_METHODS.map((value) => (
                 <option key={value} value={value}>
-                  {label}
+                  {METHODS[value]}
                 </option>
               ))}
             </SelectField>
@@ -269,7 +278,10 @@ export function OrdersPage() {
                   <span>
                     <span className="font-mono">{order.code}</span> · {order.customerName}
                     <br />
-                    <span className="text-xs text-fg-dim">{formatDate(order.createdAt)}</span>
+                    <span className="text-xs text-fg-dim">
+                      {formatDate(order.createdAt)} ·{" "}
+                      {order.checkoutMethod === "mercadopago" ? "Mercado Pago" : "Transferencia"}
+                    </span>
                   </span>
                   <span className="text-right">
                     {formatMoney(order.totalCents)}

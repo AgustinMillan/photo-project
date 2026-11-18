@@ -1,0 +1,173 @@
+import { createHmac, timingSafeEqual } from "node:crypto";
+import { env } from "../../config/env.js";
+import { AppError } from "../../shared/errors/app-error.js";
+
+/**
+ * Thin client for the Mercado Pago REST API (OAuth marketplace + Checkout Pro).
+ * Base URLs are configurable so tests can point them at a fake server.
+ */
+
+export type MpTokenResponse = {
+  access_token: string;
+  refresh_token?: string;
+  public_key?: string;
+  user_id: number | string;
+  expires_in?: number;
+  live_mode?: boolean;
+};
+
+export type MpPreference = { id: string; init_point: string; sandbox_init_point?: string };
+
+export type MpPayment = {
+  id: number | string;
+  status: string;
+  status_detail?: string;
+  external_reference?: string | null;
+  transaction_amount: number;
+  currency_id: string;
+  collector_id?: number | string;
+  date_approved?: string | null;
+};
+
+export function mercadoPagoConfigured(): boolean {
+  return Boolean(env.MP_CLIENT_ID && env.MP_CLIENT_SECRET);
+}
+
+export function mercadoPagoRedirectUri(): string {
+  return new URL("/api/v1/payments/mercadopago/callback", env.APP_URL).toString();
+}
+
+export function mercadoPagoWebhookUrl(storeId: string): string {
+  const url = new URL("/api/v1/payments/mercadopago/webhook", env.APP_URL);
+  url.searchParams.set("store", storeId);
+  return url.toString();
+}
+
+function upstreamError(status: number, body: unknown): AppError {
+  return new AppError({
+    statusCode: 502,
+    code: "PAYMENT_PROVIDER_ERROR",
+    message: "Mercado Pago rejected the request.",
+    details: { status, body },
+  });
+}
+
+async function request<T>(
+  method: string,
+  path: string,
+  options: { token?: string; body?: unknown; base?: string } = {},
+): Promise<T> {
+  const response = await fetch(`${options.base ?? env.MP_API_BASE}${path}`, {
+    method,
+    headers: {
+      Accept: "application/json",
+      ...(options.body !== undefined ? { "Content-Type": "application/json" } : {}),
+      ...(options.token ? { Authorization: `Bearer ${options.token}` } : {}),
+    },
+    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+    signal: AbortSignal.timeout(15_000),
+  });
+  const text = await response.text();
+  let data: unknown = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = text;
+  }
+  if (!response.ok) throw upstreamError(response.status, data);
+  return data as T;
+}
+
+export function authorizationUrl(state: string, codeChallenge?: string): string {
+  const url = new URL("/authorization", env.MP_AUTH_BASE);
+  url.searchParams.set("client_id", env.MP_CLIENT_ID);
+  url.searchParams.set("response_type", "code");
+  url.searchParams.set("platform_id", "mp");
+  url.searchParams.set("state", state);
+  url.searchParams.set("redirect_uri", mercadoPagoRedirectUri());
+  if (codeChallenge) {
+    url.searchParams.set("code_challenge", codeChallenge);
+    url.searchParams.set("code_challenge_method", "S256");
+  }
+  return url.toString();
+}
+
+export function exchangeAuthorizationCode(code: string, codeVerifier?: string) {
+  return request<MpTokenResponse>("POST", "/oauth/token", {
+    body: {
+      client_id: env.MP_CLIENT_ID,
+      client_secret: env.MP_CLIENT_SECRET,
+      grant_type: "authorization_code",
+      code,
+      redirect_uri: mercadoPagoRedirectUri(),
+      ...(codeVerifier ? { code_verifier: codeVerifier } : {}),
+    },
+  });
+}
+
+export function refreshAccessToken(refreshToken: string) {
+  return request<MpTokenResponse>("POST", "/oauth/token", {
+    body: {
+      client_id: env.MP_CLIENT_ID,
+      client_secret: env.MP_CLIENT_SECRET,
+      grant_type: "refresh_token",
+      refresh_token: refreshToken,
+    },
+  });
+}
+
+export function createPreference(sellerToken: string, body: Record<string, unknown>) {
+  return request<MpPreference>("POST", "/checkout/preferences", { token: sellerToken, body });
+}
+
+export function getPayment(sellerToken: string, paymentId: string) {
+  return request<MpPayment>("GET", `/v1/payments/${encodeURIComponent(paymentId)}`, {
+    token: sellerToken,
+  });
+}
+
+export async function searchPaymentsByReference(sellerToken: string, externalReference: string) {
+  const query = new URLSearchParams({
+    external_reference: externalReference,
+    sort: "date_created",
+    criteria: "desc",
+  });
+  const result = await request<{ results?: MpPayment[] }>("GET", `/v1/payments/search?${query}`, {
+    token: sellerToken,
+  });
+  return result.results ?? [];
+}
+
+/**
+ * Validates the `x-signature` header of a webhook: HMAC-SHA256 (hex) of
+ * "id:<data.id>;request-id:<x-request-id>;ts:<ts>;" with the app's webhook
+ * secret. Parts absent from the request are omitted from the manifest.
+ */
+export function verifyWebhookSignature(input: {
+  signature: string | undefined;
+  requestId: string | undefined;
+  dataId: string | undefined;
+}): boolean {
+  if (!env.MP_WEBHOOK_SECRET || !input.signature) return false;
+  const parts = Object.fromEntries(
+    input.signature.split(",").map((part) => {
+      const [k, ...v] = part.split("=");
+      return [k?.trim() ?? "", v.join("=").trim()];
+    }),
+  );
+  const ts = parts.ts;
+  const v1 = parts.v1;
+  if (!ts || !v1) return false;
+
+  let manifest = "";
+  if (input.dataId)
+    manifest += `id:${/^[a-z0-9]+$/i.test(input.dataId) ? input.dataId.toLowerCase() : input.dataId};`;
+  if (input.requestId) manifest += `request-id:${input.requestId};`;
+  manifest += `ts:${ts};`;
+
+  const expected = Buffer.from(
+    createHmac("sha256", env.MP_WEBHOOK_SECRET).update(manifest).digest("hex"),
+  );
+  const received = Buffer.from(v1);
+  return expected.length === received.length && timingSafeEqual(expected, received);
+}

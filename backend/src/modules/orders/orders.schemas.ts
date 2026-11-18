@@ -7,6 +7,7 @@ export const createOrderSchema = z.object({
     .array(z.object({ type: z.enum(["photo", "album"]), id: z.string().uuid() }))
     .min(1)
     .max(300),
+  paymentMethod: z.enum(["transfer", "mercadopago"]).default("transfer"),
 });
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 

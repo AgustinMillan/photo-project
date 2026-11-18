@@ -14,7 +14,7 @@ afterAll(async () => {
 });
 
 describe("schema", () => {
-  it("creates every table through Phase 5", async () => {
+  it("creates every table through Phase 5 and payment accounts", async () => {
     const rows = await client<{ table_name: string }[]>`
       select table_name
       from information_schema.tables
@@ -42,6 +42,7 @@ describe("schema", () => {
       "store_domains",
       "store_invitations",
       "store_memberships",
+      "store_payment_accounts",
       "store_profiles",
       "store_publications",
       "stores",
