@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
 import { env } from "../../config/env.js";
@@ -12,8 +12,8 @@ import { AppError } from "../../shared/errors/app-error.js";
  * the web root.
  */
 
-export type MediaVariant = "thumb" | "preview";
-export const MEDIA_VARIANTS: readonly MediaVariant[] = ["thumb", "preview"];
+export type MediaVariant = "thumb" | "preview" | "cover";
+export const MEDIA_VARIANTS: readonly MediaVariant[] = ["thumb", "preview", "cover"];
 
 const ALLOWED_FORMATS: Record<string, { mime: string; ext: string }> = {
   jpeg: { mime: "image/jpeg", ext: "jpg" },
@@ -161,6 +161,27 @@ export async function writeProcessedImage(image: ProcessedImage): Promise<void> 
   await writeFile(original, image.original, { flag: "wx", mode: 0o640 });
   await writeFile(derivedPath(image.assetId, "thumb"), image.thumb, { mode: 0o640 });
   await writeFile(derivedPath(image.assetId, "preview"), image.preview, { mode: 0o640 });
+}
+
+/**
+ * Renders the un-watermarked storefront cover. Only called when the
+ * photographer picks a photo as their cover; the public route never creates it.
+ */
+export async function ensureCoverVariant(assetId: string, originalKey: string): Promise<void> {
+  const target = derivedPath(assetId, "cover");
+  try {
+    await access(target);
+    return;
+  } catch {
+    // Not rendered yet.
+  }
+  const buffer = await sharp(originalPath(originalKey), { limitInputPixels: MAX_INPUT_PIXELS })
+    .rotate()
+    .resize(2000, 2000, { fit: "inside", withoutEnlargement: true })
+    .webp({ quality: 80 })
+    .toBuffer();
+  await mkdir(path.dirname(target), { recursive: true });
+  await writeFile(target, buffer, { mode: 0o640 });
 }
 
 /** Best-effort cleanup when the database transaction that follows a write fails. */

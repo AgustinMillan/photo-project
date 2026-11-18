@@ -70,5 +70,5 @@ export type BulkUpdatePhotosInput = z.infer<typeof bulkUpdatePhotosSchema>;
 
 export const mediaParamsSchema = z.object({
   assetId: z.string().uuid(),
-  variant: z.enum(["thumb.webp", "preview.webp"]),
+  variant: z.enum(["thumb.webp", "preview.webp", "cover.webp"]),
 });

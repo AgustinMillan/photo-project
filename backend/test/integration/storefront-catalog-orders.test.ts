@@ -247,6 +247,20 @@ describe("storefront drafts and publications", () => {
     ).toBe("Dos");
   });
 
+  it("serves an un-watermarked cover only for the photo chosen as cover", async () => {
+    const owner = await createOwner("cover@example.com", "cover-studio");
+    const chosen = (await upload(owner, await image("#445566"))).json().photo;
+    const other = (await upload(owner, await image("#665544"))).json().photo;
+    await saveAndPublish(owner, { coverPhotoId: chosen.id });
+
+    const content = (await publicGet(owner.host, "/api/v1/public/storefront")).json().content;
+    expect(content.coverUrl).toMatch(/cover\.webp$/);
+    expect((await app.inject({ method: "GET", url: content.coverUrl })).statusCode).toBe(200);
+
+    const otherCover = other.thumbUrl.replace("thumb.webp", "cover.webp");
+    expect((await app.inject({ method: "GET", url: otherCover })).statusCode).toBe(404);
+  });
+
   it("rejects section reordering on plans without the entitlement", async () => {
     const owner = await createOwner("order@example.com", "order-studio");
     const reordered = await app.inject({

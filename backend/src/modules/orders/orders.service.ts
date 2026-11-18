@@ -254,7 +254,8 @@ export async function createOrder(rawHostname: string, input: CreateOrderInput) 
   const link = orderLink(hostname, order.id);
   const total = formatMoney(order.totalCents, order.currency);
 
-  await notify(
+  // Emails go out in the background so the customer is not kept waiting on SMTP.
+  void notify(
     sendEmail({
       to: order.customerEmail,
       subject: `Tu pedido ${order.code} en ${store.name}`,
@@ -277,7 +278,9 @@ export async function createOrder(rawHostname: string, input: CreateOrderInput) 
       ].join(""),
     }),
   );
-  await notifyOwner(store.id, order.code, order.customerName, total);
+  void notifyOwner(store.id, order.code, order.customerName, total).catch((error: unknown) =>
+    logger.error({ err: error }, "Failed to notify store owner"),
+  );
 
   return {
     orderId: order.id,
@@ -597,7 +600,7 @@ export async function recordPayment(
   if (result.isPaid) {
     const hostname = (await storeHostname(access.store.id)) ?? access.store.slug;
     const link = orderLink(hostname, result.order.id);
-    await notify(
+    void notify(
       sendEmail({
         to: result.order.customerEmail,
         subject: `Tus fotos del pedido ${result.order.code} están listas`,

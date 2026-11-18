@@ -1,8 +1,10 @@
+import { access } from "node:fs/promises";
 import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import {
   albums,
   auditLogs,
+  mediaAssets,
   photos,
   photoVersions,
   STOREFRONT_SECTION_KEYS,
@@ -14,12 +16,13 @@ import {
 import { AppError } from "../../shared/errors/app-error.js";
 import { SECTIONS_REORDER_FEATURE } from "../billing/billing.constants.js";
 import { getEffectiveEntitlement, getStoreSalesStatus } from "../billing/billing.service.js";
+import { derivedPath, ensureCoverVariant } from "../catalog/media.js";
 import type { StoreAccess } from "../stores/store-access.js";
 import { normalizeHostname } from "../stores/stores.constants.js";
 import { resolveStoreByHostname } from "../stores/stores.service.js";
 import type { UpdateStorefrontInput } from "./storefront.schemas.js";
 
-export function mediaUrl(assetId: string, variant: "thumb" | "preview"): string {
+export function mediaUrl(assetId: string, variant: "thumb" | "preview" | "cover"): string {
   return `/api/v1/public/media/${assetId}/${variant}.webp`;
 }
 
@@ -110,10 +113,13 @@ export async function updateStorefrontDraft(
 
   if (input.coverPhotoId) {
     const [photo] = await db
-      .select({ id: photos.id })
+      .select({ id: photos.id, assetId: mediaAssets.id, originalKey: mediaAssets.originalKey })
       .from(photos)
+      .innerJoin(photoVersions, currentVersionJoin)
+      .innerJoin(mediaAssets, eq(mediaAssets.id, photoVersions.mediaAssetId))
       .where(and(eq(photos.id, input.coverPhotoId), eq(photos.storeId, access.store.id)))
       .limit(1);
+    if (photo) await ensureCoverVariant(photo.assetId, photo.originalKey);
     if (!photo) {
       throw new AppError({
         statusCode: 400,
@@ -263,6 +269,23 @@ async function publicPhotos(storeId: string, albumId: string | null): Promise<Pu
   }));
 }
 
+async function heroUrlForPhoto(storeId: string, photoId: string | null): Promise<string | null> {
+  if (!photoId) return null;
+  const [row] = await db
+    .select({ assetId: photoVersions.mediaAssetId })
+    .from(photos)
+    .innerJoin(photoVersions, currentVersionJoin)
+    .where(and(eq(photos.id, photoId), eq(photos.storeId, storeId)))
+    .limit(1);
+  if (!row) return null;
+  try {
+    await access(derivedPath(row.assetId, "cover"));
+    return mediaUrl(row.assetId, "cover");
+  } catch {
+    return mediaUrl(row.assetId, "preview");
+  }
+}
+
 async function coverUrlForPhoto(storeId: string, photoId: string | null): Promise<string | null> {
   if (!photoId) return null;
   const [row] = await db
@@ -324,7 +347,7 @@ export async function getPublicStorefront(rawHostname: string) {
       currency: "ARS",
     },
     publication: { version: publication.version, publishedAt: publication.createdAt },
-    content: { ...content, coverUrl: await coverUrlForPhoto(store.id, content.coverPhotoId) },
+    content: { ...content, coverUrl: await heroUrlForPhoto(store.id, content.coverPhotoId) },
     albums: albumViews.filter((album) => album.photoCount > 0),
     photos: await publicPhotos(store.id, null),
   };
