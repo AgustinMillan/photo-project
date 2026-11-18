@@ -462,7 +462,7 @@ export async function listStoreOrders(access: StoreAccess, status?: OrderStatus)
       currency: orders.currency,
       createdAt: orders.createdAt,
       paidAt: orders.paidAt,
-      paidCents: sql<number>`coalesce((select sum(amount_cents)::bigint from ${payments} p where p.order_id = ${orders.id}), 0)::float8`,
+      paidCents: sql<number>`coalesce((select sum(amount_cents)::bigint from ${payments} p where p.order_id = "orders"."id"), 0)::float8`,
     })
     .from(orders)
     .where(and(eq(orders.storeId, access.store.id), status ? eq(orders.status, status) : undefined))
@@ -489,7 +489,7 @@ export async function getStoreOrder(access: StoreAccess, orderId: string) {
       kind: orderItems.kind,
       title: orderItems.titleSnapshot,
       priceCents: orderItems.priceCents,
-      photoCount: sql<number>`(select count(*)::int from ${orderItemPhotos} x where x.order_item_id = ${orderItems.id})`,
+      photoCount: sql<number>`(select count(*)::int from ${orderItemPhotos} x where x.order_item_id = "order_items"."id")`,
     })
     .from(orderItems)
     .where(eq(orderItems.orderId, order.id))

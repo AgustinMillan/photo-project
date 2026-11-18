@@ -397,6 +397,17 @@ describe("catalog and media", () => {
 describe("orders, manual payments and downloads", () => {
   it("does not charge twice for a photo already covered by an album", async () => {
     const { owner, album, photoA, loose } = await sellableStore("dedupe-studio");
+
+    const storefront = (await publicGet(owner.host, "/api/v1/public/storefront")).json();
+    expect(storefront.albums).toEqual([expect.objectContaining({ id: album.id, photoCount: 2 })]);
+    expect(storefront.photos).toEqual([expect.objectContaining({ id: loose })]);
+    const panelAlbums = await app.inject({
+      method: "GET",
+      url: `/api/v1/stores/${owner.storeId}/albums`,
+      headers: auth(owner.token),
+    });
+    expect(panelAlbums.json().albums[0]).toMatchObject({ photoCount: 2, publishedCount: 2 });
+    expect(panelAlbums.json().albums[0].coverUrl).toMatch(/thumb\.webp$/);
     const response = await checkout(owner.host, [
       { type: "album", id: album.id },
       { type: "photo", id: photoA },
@@ -440,6 +451,12 @@ describe("orders, manual payments and downloads", () => {
       payload: { amountCents: 100000, method: "transfer", reference: "parcial" },
     });
     expect(partial.json()).toMatchObject({ status: "pending_payment", remainingCents: 50000 });
+    const listed = await app.inject({
+      method: "GET",
+      url: `/api/v1/stores/${owner.storeId}/orders`,
+      headers: auth(owner.token),
+    });
+    expect(listed.json().orders[0]).toMatchObject({ paidCents: 100000, status: "pending_payment" });
     expect((await publicGet(owner.host, downloadUrl)).statusCode).toBe(403);
 
     const [originalBefore] = await client`

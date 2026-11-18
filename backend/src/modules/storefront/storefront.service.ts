@@ -299,7 +299,7 @@ export async function getPublicStorefront(rawHostname: string) {
       description: albums.description,
       priceCents: albums.priceCents,
       coverPhotoId: albums.coverPhotoId,
-      photoCount: sql<number>`(select count(*)::int from ${photos} p where p.album_id = ${albums.id} and p.status = 'published')`,
+      photoCount: sql<number>`(select count(*)::int from ${photos} p where p.album_id = "albums"."id" and p.status = 'published')`,
     })
     .from(albums)
     .where(and(eq(albums.storeId, store.id), eq(albums.status, "published")))

@@ -73,11 +73,11 @@ export async function listAlbums(access: StoreAccess) {
       sortOrder: albums.sortOrder,
       coverPhotoId: albums.coverPhotoId,
       createdAt: albums.createdAt,
-      photoCount: sql<number>`(select count(*)::int from ${photos} p where p.album_id = ${albums.id} and p.status <> 'archived')`,
-      publishedCount: sql<number>`(select count(*)::int from ${photos} p where p.album_id = ${albums.id} and p.status = 'published')`,
+      photoCount: sql<number>`(select count(*)::int from ${photos} p where p.album_id = "albums"."id" and p.status <> 'archived')`,
+      publishedCount: sql<number>`(select count(*)::int from ${photos} p where p.album_id = "albums"."id" and p.status = 'published')`,
       coverAssetId: sql<
         string | null
-      >`(select v.media_asset_id from ${photoVersions} v join ${photos} p on p.id = v.photo_id where v.is_current and p.album_id = ${albums.id} and p.status <> 'archived' order by (p.id = ${albums.coverPhotoId}) desc, p.sort_order, p.created_at limit 1)`,
+      >`(select v.media_asset_id from ${photoVersions} v join ${photos} p on p.id = v.photo_id where v.is_current and p.album_id = "albums"."id" and p.status <> 'archived' order by (p.id = "albums"."cover_photo_id") desc, p.sort_order, p.created_at limit 1)`,
     })
     .from(albums)
     .where(and(eq(albums.storeId, access.store.id), ne(albums.status, "archived")))
