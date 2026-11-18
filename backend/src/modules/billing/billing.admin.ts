@@ -449,6 +449,8 @@ export async function verifyUserEmail(input: { email: string; now?: Date }): Pro
       .update(users)
       .set({
         emailVerifiedAt: sql`coalesce(${users.emailVerifiedAt}, ${now.toISOString()}::timestamptz)`,
+        // Same transition as the email link: a pending account becomes active.
+        status: sql`case when ${users.status} = 'pending_verification' then 'active' else ${users.status} end`,
         updatedAt: now,
       })
       .where(sql`lower(${users.email}) = lower(${input.email.trim()})`)

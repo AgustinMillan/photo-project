@@ -215,6 +215,12 @@ describe("admin billing operations", () => {
     const [row] = await client`
       select email_verified_at from users where email = 'unverified@example.com'`;
     expect(row?.email_verified_at).toBeInstanceOf(Date);
+    const login = await app.inject({
+      method: "POST",
+      url: "/api/v1/auth/login",
+      payload: { email: "unverified@example.com", password: PASSWORD },
+    });
+    expect(login.statusCode).toBe(200);
     expect(await runAdminCli(["verify-email", "ghost@example.com"]).catch((e) => e.code)).toBe(
       "USER_NOT_FOUND",
     );
