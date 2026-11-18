@@ -14,6 +14,7 @@
   },
   "scripts": {
     "dev": "pnpm --filter @photo-platform/api dev",
+    "dev:web": "pnpm --filter @photo-platform/web dev",
     "build": "pnpm --filter @photo-platform/api build",
     "typecheck": "pnpm --filter @photo-platform/api typecheck",
     "lint": "pnpm --filter @photo-platform/api lint",
@@ -26,7 +27,11 @@
     "db:studio": "pnpm --filter @photo-platform/api db:studio",
     "infra:up": "docker compose -f infra/docker-compose.yml up -d",
     "infra:down": "docker compose -f infra/docker-compose.yml down",
-    "infra:logs": "docker compose -f infra/docker-compose.yml logs -f"
+    "infra:logs": "docker compose -f infra/docker-compose.yml logs -f",
+    "web:lint": "pnpm --filter @photo-platform/web lint",
+    "web:typecheck": "pnpm --filter @photo-platform/web typecheck",
+    "web:test": "pnpm --filter @photo-platform/web test",
+    "web:build": "pnpm --filter @photo-platform/web build"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.6.8"
