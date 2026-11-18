@@ -37,12 +37,17 @@ services:
       HOST: 0.0.0.0
       PORT: 3000
       DATABASE_URL: postgres://photo_platform:${POSTGRES_PASSWORD}@postgres:5432/photo_platform
+      MEDIA_ROOT: /data/media
+    volumes:
+      # Originals and derivatives. Back this volume up together with Postgres.
+      - media:/data/media
     ports:
       - "127.0.0.1:${API_HOST_PORT:-3100}:3000"
     deploy:
       resources:
         limits:
-          memory: 384m
+          memory: 512m
 
 volumes:
   pgdata:
+  media:

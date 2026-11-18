@@ -6,6 +6,9 @@ import { Button } from "./ui.tsx";
 
 const NAV = [
   { to: "/app", label: "Resumen", end: true },
+  { to: "/app/storefront", label: "Vitrina", end: false },
+  { to: "/app/catalog", label: "Catálogo", end: false },
+  { to: "/app/orders", label: "Pedidos", end: false },
   { to: "/app/team", label: "Equipo", end: false },
   { to: "/app/subscription", label: "Plan", end: false },
   { to: "/app/settings", label: "Ajustes", end: false },
@@ -44,7 +47,7 @@ export function DashboardLayout() {
           ) : null}
         </div>
 
-        <nav aria-label="Principal" className="mt-6 flex gap-1 md:flex-col">
+        <nav aria-label="Principal" className="mt-6 flex flex-wrap gap-1 md:flex-col">
           {NAV.map((item) => (
             <NavLink
               key={item.to}

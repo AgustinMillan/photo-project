@@ -41,6 +41,9 @@ const envSchema = z.object({
   // "log" writes outgoing emails to the application log instead of sending
   // them. Only meant as a stopgap until a transactional email provider exists.
   EMAIL_TRANSPORT: z.enum(["smtp", "log"]).default("smtp"),
+  // Private media storage (originals and derivatives). Must not be web-served.
+  MEDIA_ROOT: z.string().min(1).default("./var/media"),
+  MAX_UPLOAD_MB: z.coerce.number().int().min(1).max(200).default(30),
 });
 
 const result = envSchema.safeParse(process.env);

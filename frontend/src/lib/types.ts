@@ -131,3 +131,160 @@ export type SalesStatus = {
     | "PLAN_PURCHASES_DISABLED"
     | null;
 };
+
+// --- Storefront (phase 3) ---------------------------------------------------
+
+export type SectionKey = "hero" | "albums" | "about" | "contact";
+
+export type StorefrontContent = {
+  displayName: string;
+  tagline: string;
+  bio: string;
+  contactEmail: string;
+  phone: string;
+  instagram: string;
+  website: string;
+  coverPhotoId: string | null;
+  paymentInstructions: string;
+  watermarkText: string;
+  sections: Array<{ key: SectionKey; enabled: boolean }>;
+};
+
+export type StorefrontAdmin = {
+  draft: StorefrontContent;
+  publicationStatus: PublicationStatus;
+  published: { version: number; publishedAt: string } | null;
+  canReorderSections: boolean;
+};
+
+// --- Catalog (phase 4) -------------------------------------------------------
+
+export type CatalogStatus = "draft" | "published" | "archived";
+
+export type Album = {
+  id: string;
+  title: string;
+  description: string;
+  priceCents: number | null;
+  status: CatalogStatus;
+  sortOrder: number;
+  coverPhotoId: string | null;
+  createdAt: string;
+  photoCount: number;
+  publishedCount: number;
+  coverUrl: string | null;
+};
+
+export type Photo = {
+  id: string;
+  title: string;
+  priceCents: number | null;
+  status: CatalogStatus;
+  albumId: string | null;
+  sortOrder: number;
+  createdAt: string;
+  version: number;
+  width: number;
+  height: number;
+  originalFilename: string;
+  thumbUrl: string;
+  previewUrl: string;
+};
+
+// --- Orders (phase 5) --------------------------------------------------------
+
+export type OrderStatus = "pending_payment" | "paid" | "cancelled";
+export type PaymentMethod = "transfer" | "cash" | "other";
+
+export type OrderSummary = {
+  id: string;
+  code: string;
+  customerName: string;
+  customerEmail: string;
+  status: OrderStatus;
+  totalCents: number;
+  currency: string;
+  createdAt: string;
+  paidAt: string | null;
+  paidCents: number;
+};
+
+export type OrderDetail = {
+  order: OrderSummary & { paymentInstructions: string; cancelledAt: string | null };
+  items: Array<{
+    id: string;
+    kind: "photo" | "album";
+    title: string;
+    priceCents: number;
+    photoCount: number;
+  }>;
+  payments: Array<{
+    id: string;
+    amountCents: number;
+    method: PaymentMethod;
+    reference: string;
+    createdAt: string;
+  }>;
+  paidCents: number;
+  downloadCount: number;
+};
+
+// --- Public shop ---------------------------------------------------------------
+
+export type PublicPhoto = {
+  id: string;
+  title: string;
+  priceCents: number | null;
+  albumId: string | null;
+  thumbUrl: string;
+  previewUrl: string;
+};
+
+export type PublicStorefront = {
+  store: { id: string; name: string; slug: string; purchasesEnabled: boolean; currency: string };
+  publication: { version: number; publishedAt: string };
+  content: Omit<StorefrontContent, "watermarkText" | "paymentInstructions"> & {
+    coverUrl: string | null;
+  };
+  albums: Array<{
+    id: string;
+    title: string;
+    description: string;
+    priceCents: number | null;
+    photoCount: number;
+    coverUrl: string | null;
+  }>;
+  photos: PublicPhoto[];
+};
+
+export type PublicAlbum = {
+  album: { id: string; title: string; description: string; priceCents: number | null };
+  photos: PublicPhoto[];
+  purchasesEnabled: boolean;
+};
+
+export type CreatedOrder = {
+  orderId: string;
+  code: string;
+  accessToken: string;
+  totalCents: number;
+  currency: string;
+  paymentInstructions: string;
+};
+
+export type CustomerOrder = {
+  store: { name: string };
+  order: {
+    id: string;
+    code: string;
+    status: OrderStatus;
+    customerName: string;
+    totalCents: number;
+    currency: string;
+    paymentInstructions: string;
+    createdAt: string;
+    paidAt: string | null;
+  };
+  items: Array<{ kind: "photo" | "album"; title: string; priceCents: number }>;
+  downloads: Array<{ photoId: string; title: string; thumbUrl: string }>;
+};
