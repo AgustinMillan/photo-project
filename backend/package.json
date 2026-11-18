@@ -21,7 +21,8 @@
     "db:seed": "tsx src/db/seed-cli.ts",
     "db:studio": "drizzle-kit studio",
     "admin": "tsx src/admin/cli.ts",
-    "admin:prod": "node dist/admin/cli.js"
+    "admin:prod": "node dist/admin/cli.js",
+    "db:migrate:prod": "node dist/db/migrate.js"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.5",

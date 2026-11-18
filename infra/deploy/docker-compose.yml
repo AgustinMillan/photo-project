@@ -1,0 +1,48 @@
+# Production stack. Shares the host with other services, so:
+# - Postgres publishes no port at all (only reachable from the api container).
+# - The API listens on 127.0.0.1 only; the host nginx is the public entry point.
+# Secrets live in infra/deploy/.env (not committed). See .env.example.
+name: photo-platform-prod
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: photo_platform
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: photo_platform
+      TZ: UTC
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U photo_platform -d photo_platform"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    deploy:
+      resources:
+        limits:
+          memory: 384m
+
+  api:
+    image: photo-platform-api:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3000
+      DATABASE_URL: postgres://photo_platform:${POSTGRES_PASSWORD}@postgres:5432/photo_platform
+    ports:
+      - "127.0.0.1:${API_HOST_PORT:-3100}:3000"
+    deploy:
+      resources:
+        limits:
+          memory: 384m
+
+volumes:
+  pgdata:

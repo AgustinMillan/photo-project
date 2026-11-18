@@ -436,3 +436,34 @@ export async function listSubscriptions(filter?: {
     return { ...row, status: lapsed ? "expired" : row.status, isPilot: row.isPilot ?? false };
   });
 }
+
+/**
+ * Marks a user's email as verified. Used while there is no transactional
+ * email provider, so onboarded customers are not blocked on a link.
+ */
+export async function verifyUserEmail(input: { email: string; now?: Date }): Promise<void> {
+  const now = input.now ?? new Date();
+
+  await db.transaction(async (tx) => {
+    const [user] = await tx
+      .update(users)
+      .set({
+        emailVerifiedAt: sql`coalesce(${users.emailVerifiedAt}, ${now.toISOString()}::timestamptz)`,
+        updatedAt: now,
+      })
+      .where(sql`lower(${users.email}) = lower(${input.email.trim()})`)
+      .returning({ id: users.id });
+
+    if (!user) {
+      throw new AdminBillingError("USER_NOT_FOUND", `No user is registered as ${input.email}.`);
+    }
+
+    await tx.insert(auditLogs).values({
+      actorType: "admin_cli",
+      action: "user.admin_email_verified",
+      entityType: "user",
+      entityId: user.id,
+      metadata: {},
+    });
+  });
+}
