@@ -3,11 +3,7 @@ import { describe, it } from "node:test";
 import { ApiError, createApiClient } from "../src/lib/api.ts";
 import { daysUntil, slugify, storeUrl } from "../src/lib/format.ts";
 import { resolveTenantSlug } from "../src/lib/tenant.ts";
-import {
-  validateEmail,
-  validatePassword,
-  validateSlug,
-} from "../src/lib/validation.ts";
+import { validateEmail, validatePassword, validateSlug } from "../src/lib/validation.ts";
 
 function json(status: number, body: unknown): Response {
   return new Response(body === null ? null : JSON.stringify(body), { status });
@@ -87,7 +83,9 @@ describe("api client", () => {
         if (path.endsWith("/auth/refresh")) {
           return json(200, { accessToken: "new", tokenType: "Bearer", expiresIn: 900, user: {} });
         }
-        return auth === "Bearer new" ? json(200, { ok: true }) : json(401, { error: { code: "UNAUTHORIZED" } });
+        return auth === "Bearer new"
+          ? json(200, { ok: true })
+          : json(401, { error: { code: "UNAUTHORIZED" } });
       },
     });
     api.setAccessToken("old");
@@ -120,7 +118,9 @@ describe("api client", () => {
 
   it("signals session lost when refresh fails", async () => {
     let lost = 0;
-    const api = createApiClient({ fetchImpl: async () => json(401, { error: { code: "UNAUTHORIZED" } }) });
+    const api = createApiClient({
+      fetchImpl: async () => json(401, { error: { code: "UNAUTHORIZED" } }),
+    });
     api.onSessionLost(() => lost++);
     await assert.rejects(api.get("/stores"));
     assert.equal(lost, 1);

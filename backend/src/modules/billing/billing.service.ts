@@ -53,6 +53,7 @@ export type SubscriptionView = {
   cancelledAt: Date | null;
   suspendedAt: Date | null;
   cancelAtPeriodEnd: boolean;
+  isPilot: boolean;
   createdAt: Date;
   updatedAt: Date;
   entitlements: EntitlementView[];
@@ -111,6 +112,7 @@ function toSubscriptionView(
     cancelledAt: subscription.cancelledAt,
     suspendedAt: subscription.suspendedAt,
     cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+    isPilot: subscription.isPilot,
     createdAt: subscription.createdAt,
     updatedAt: subscription.updatedAt,
     entitlements: entitlements.map(toEntitlementView),

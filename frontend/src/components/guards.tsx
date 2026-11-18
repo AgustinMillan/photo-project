@@ -6,7 +6,7 @@ import { Alert, Button, Spinner } from "./ui.tsx";
 
 /** Only allows same-origin relative paths as post-login destinations. */
 export function safeNext(value: string | null | undefined): string {
-  return value && value.startsWith("/") && !value.startsWith("//") ? value : "/app";
+  return value?.startsWith("/") && !value.startsWith("//") ? value : "/app";
 }
 
 export function RequireAuth() {

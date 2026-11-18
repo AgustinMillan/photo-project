@@ -61,7 +61,10 @@ export function OnboardingPage() {
           type: accountType,
         });
       }
-      const { store } = await storesApi.create({ name: storeName.trim(), slug: slug.trim().toLowerCase() });
+      const { store } = await storesApi.create({
+        name: storeName.trim(),
+        slug: slug.trim().toLowerCase(),
+      });
       selectStore(store.id);
       await reload();
       navigate("/app", { replace: true });
@@ -77,23 +80,43 @@ export function OnboardingPage() {
   return (
     <AuthLayout
       title="Configura tu estudio"
-      subtitle="Crea tu cuenta y tu primera tienda. La prueba gratuita de 14 días empieza con la tienda."
+      subtitle="Crea tu cuenta y tu primera tienda. La prueba gratuita de 30 días empieza con la tienda."
     >
       <form onSubmit={onSubmit} className="space-y-5" noValidate>
         {formError ? <Alert>{formError}</Alert> : null}
 
         {needsAccount ? (
           <>
-            <Field label="Nombre de la cuenta" value={accountName} error={errors.accountName} onChange={(e) => setAccountName(e.target.value)} />
-            <SelectField label="Tipo" value={accountType} onChange={(e) => setAccountType(e.target.value as AccountType)}>
+            <Field
+              label="Nombre de la cuenta"
+              value={accountName}
+              error={errors.accountName}
+              onChange={(e) => setAccountName(e.target.value)}
+            />
+            <SelectField
+              label="Tipo"
+              value={accountType}
+              onChange={(e) => setAccountType(e.target.value as AccountType)}
+            >
               <option value="individual">Fotógrafo independiente</option>
               <option value="studio">Estudio</option>
             </SelectField>
-            <Field label="Email de facturación" type="email" value={billingEmail} error={errors.billingEmail} onChange={(e) => setBillingEmail(e.target.value)} />
+            <Field
+              label="Email de facturación"
+              type="email"
+              value={billingEmail}
+              error={errors.billingEmail}
+              onChange={(e) => setBillingEmail(e.target.value)}
+            />
           </>
         ) : null}
 
-        <Field label="Nombre de la tienda" value={storeName} error={errors.storeName} onChange={(e) => onStoreNameChange(e.target.value)} />
+        <Field
+          label="Nombre de la tienda"
+          value={storeName}
+          error={errors.storeName}
+          onChange={(e) => onStoreNameChange(e.target.value)}
+        />
         <Field
           label="Subdominio"
           value={slug}

@@ -22,6 +22,13 @@
       "when": 1794884356772,
       "tag": "0002_unusual_gauntlet",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794991457931,
+      "tag": "0003_subscription_pilot",
+      "breakpoints": true
     }
   ]
 }

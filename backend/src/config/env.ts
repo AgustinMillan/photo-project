@@ -28,7 +28,7 @@ const envSchema = z.object({
     .min(1)
     .default("base")
     .transform((value) => value.trim().toLowerCase()),
-  TRIAL_DURATION_DAYS: z.coerce.number().int().positive().default(14),
+  TRIAL_DURATION_DAYS: z.coerce.number().int().positive().default(30),
   SMTP_HOST: z.string().min(1).default("localhost"),
   SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(1025),
   SMTP_FROM: z.string().min(1).default("no-reply@photo-platform.local"),

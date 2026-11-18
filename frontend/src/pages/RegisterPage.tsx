@@ -43,8 +43,8 @@ export function RegisterPage() {
     return (
       <AuthLayout title="Revisa tu correo">
         <Alert tone="ok">
-          Te enviamos un enlace a {email.trim()} para verificar tu cuenta. Si no llega en unos minutos,
-          revisa la carpeta de spam.
+          Te enviamos un enlace a {email.trim()} para verificar tu cuenta. Si no llega en unos
+          minutos, revisa la carpeta de spam.
         </Alert>
         <Link className="block text-center text-sm text-accent hover:text-accent-soft" to="/login">
           Ir a ingresar
@@ -56,7 +56,7 @@ export function RegisterPage() {
   return (
     <AuthLayout
       title="Crear cuenta"
-      subtitle="Empieza con una prueba gratuita de 14 días."
+      subtitle="Empieza con una prueba gratuita de 30 días."
       footer={
         <>
           ¿Ya tienes cuenta?{" "}
@@ -68,8 +68,20 @@ export function RegisterPage() {
     >
       <form onSubmit={onSubmit} className="space-y-5" noValidate>
         {formError ? <Alert>{formError}</Alert> : null}
-        <Field label="Nombre (opcional)" autoComplete="name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
-        <Field label="Email" type="email" autoComplete="email" value={email} error={errors.email} onChange={(e) => setEmail(e.target.value)} />
+        <Field
+          label="Nombre (opcional)"
+          autoComplete="name"
+          value={displayName}
+          onChange={(e) => setDisplayName(e.target.value)}
+        />
+        <Field
+          label="Email"
+          type="email"
+          autoComplete="email"
+          value={email}
+          error={errors.email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
         <Field
           label="Contraseña"
           type="password"

@@ -39,7 +39,11 @@ export function SettingsPage() {
 
     setBusy("account");
     try {
-      await accountApi.update({ name: accountName.trim(), billingEmail: billingEmail.trim(), type: accountType });
+      await accountApi.update({
+        name: accountName.trim(),
+        billingEmail: billingEmail.trim(),
+        type: accountType,
+      });
       await reload();
       setAccountMsg({ tone: "ok", text: "Cuenta actualizada." });
     } catch (caught) {
@@ -60,13 +64,21 @@ export function SettingsPage() {
     if (next.storeName || next.slug) return;
 
     const slugChanged = slug.trim().toLowerCase() !== currentStore?.slug;
-    if (slugChanged && !window.confirm("Cambiar el subdominio cambia la dirección pública de tu vitrina. ¿Continuar?")) {
+    if (
+      slugChanged &&
+      !window.confirm(
+        "Cambiar el subdominio cambia la dirección pública de tu vitrina. ¿Continuar?",
+      )
+    ) {
       return;
     }
 
     setBusy("store");
     try {
-      await storesApi.update(currentStore?.id ?? "", { name: storeName.trim(), slug: slug.trim().toLowerCase() });
+      await storesApi.update(currentStore?.id ?? "", {
+        name: storeName.trim(),
+        slug: slug.trim().toLowerCase(),
+      });
       await reload();
       setStoreMsg({ tone: "ok", text: "Tienda actualizada." });
     } catch (caught) {
@@ -83,7 +95,13 @@ export function SettingsPage() {
         <Card title="Tienda">
           <form onSubmit={saveStore} className="space-y-5" noValidate>
             {storeMsg ? <Alert tone={storeMsg.tone}>{storeMsg.text}</Alert> : null}
-            <Field label="Nombre" value={storeName} error={errors.storeName} disabled={!canEditStore} onChange={(e) => setStoreName(e.target.value)} />
+            <Field
+              label="Nombre"
+              value={storeName}
+              error={errors.storeName}
+              disabled={!canEditStore}
+              onChange={(e) => setStoreName(e.target.value)}
+            />
             <Field
               label="Subdominio"
               value={slug}
@@ -97,7 +115,9 @@ export function SettingsPage() {
                 Guardar tienda
               </Button>
             ) : (
-              <p className="text-sm text-fg-dim">Solo propietarios y administradores pueden editar la tienda.</p>
+              <p className="text-sm text-fg-dim">
+                Solo propietarios y administradores pueden editar la tienda.
+              </p>
             )}
           </form>
         </Card>
@@ -105,12 +125,30 @@ export function SettingsPage() {
         <Card title="Cuenta">
           <form onSubmit={saveAccount} className="space-y-5" noValidate>
             {accountMsg ? <Alert tone={accountMsg.tone}>{accountMsg.text}</Alert> : null}
-            <Field label="Nombre" value={accountName} error={errors.accountName} disabled={!isOwner} onChange={(e) => setAccountName(e.target.value)} />
-            <SelectField label="Tipo" value={accountType} disabled={!isOwner} onChange={(e) => setAccountType(e.target.value as AccountType)}>
+            <Field
+              label="Nombre"
+              value={accountName}
+              error={errors.accountName}
+              disabled={!isOwner}
+              onChange={(e) => setAccountName(e.target.value)}
+            />
+            <SelectField
+              label="Tipo"
+              value={accountType}
+              disabled={!isOwner}
+              onChange={(e) => setAccountType(e.target.value as AccountType)}
+            >
               <option value="individual">Fotógrafo independiente</option>
               <option value="studio">Estudio</option>
             </SelectField>
-            <Field label="Email de facturación" type="email" value={billingEmail} error={errors.billingEmail} disabled={!isOwner} onChange={(e) => setBillingEmail(e.target.value)} />
+            <Field
+              label="Email de facturación"
+              type="email"
+              value={billingEmail}
+              error={errors.billingEmail}
+              disabled={!isOwner}
+              onChange={(e) => setBillingEmail(e.target.value)}
+            />
             {isOwner ? (
               <Button type="submit" loading={busy === "account"}>
                 Guardar cuenta

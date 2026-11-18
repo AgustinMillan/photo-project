@@ -53,7 +53,7 @@ pnpm dev
 
 La API queda en `http://localhost:3000`.
 
-Los subdominios de tienda de desarrollo se construyen como `slug.PLATFORM_DOMAIN`. Con el valor por defecto `PLATFORM_DOMAIN=localhost`, una tienda con slug `mi-estudio` queda disponible en `http://mi-estudio.localhost:3000` (el puerto depende del proxy/frontend). Las invitaciones usan `STORE_INVITATION_TTL_DAYS` (7 días por defecto). El trial usa `TRIAL_PLAN_CODE` (`base` por defecto) y `TRIAL_DURATION_DAYS` (`14` por defecto).
+Los subdominios de tienda de desarrollo se construyen como `slug.PLATFORM_DOMAIN`. Con el valor por defecto `PLATFORM_DOMAIN=localhost`, una tienda con slug `mi-estudio` queda disponible en `http://mi-estudio.localhost:3000` (el puerto depende del proxy/frontend). Las invitaciones usan `STORE_INVITATION_TTL_DAYS` (7 días por defecto). El trial usa `TRIAL_PLAN_CODE` (`base` por defecto) y `TRIAL_DURATION_DAYS` (`30` por defecto).
 
 Health checks:
 
@@ -193,7 +193,7 @@ Todas las rutas administrativas requieren `Authorization: Bearer`. La resolució
 Los planes y sus entitlements son filas configurables en la base. El código funcional consulta capacidades (`stores.max`, `team.enabled`, `team.max_members`, `purchases.enabled`), no nombres de plan. Los seeds iniciales son `base`, `intermediate` y `business`; sus límites son provisionales y se pueden cambiar en `plan_entitlements` sin desplegar código.
 
 - El trial empieza al crear la primera tienda y se crea en la misma transacción. Si la cuenta ya tiene una suscripción abierta, no se crea otra.
-- `TRIAL_PLAN_CODE` y `TRIAL_DURATION_DAYS` definen el plan y la duración. `POST /api/v1/stores` acepta `planCode` solo mientras se crea el trial; después el cambio de plan requiere el flujo de facturación futuro.
+- `TRIAL_PLAN_CODE` y `TRIAL_DURATION_DAYS` definen el plan y la duración. `POST /api/v1/stores` acepta `planCode` solo mientras se crea el trial; después el cambio de plan se hace con el CLI de administración (ver abajo).
 - Solo `trial` y `active` habilitan funcionalidades. `expired`, `cancelled` y `suspended` bloquean nuevas capacidades, pero no borran tiendas, archivos, pedidos ni derechos adquiridos.
 - La expiración es perezosa: al leer la suscripción se marca `expired` y se registra el evento. No se depende de un cron para que las guardas sean correctas.
 - Base e Intermedio permiten una tienda. Business usa el límite configurado (10 por defecto). La creación bloquea la fila de la cuenta y cuenta las tiendas dentro de la transacción.
@@ -201,6 +201,24 @@ Los planes y sus entitlements son filas configurables en la base. El código fun
 - La guarda de compras `assertStorePurchasesEnabled` exige tienda activa, cuenta activa, suscripción usable y `purchases.enabled`. La Fase 5 la conectará al checkout; por ahora `GET /stores/:storeId/sales-status` expone el resultado y la resolución pública incluye `purchasesEnabled`.
 - Los códigos estables de Fase 2 son `STORE_LIMIT_REACHED`, `SUBSCRIPTION_INACTIVE`, `TEAM_FEATURE_DISABLED`, `TEAM_MEMBER_LIMIT_REACHED`, `STORE_PURCHASES_DISABLED`, `PLAN_NOT_FOUND` y `PLAN_CHANGE_NOT_ALLOWED`.
 - Los pedidos y pagos aún no existen en el modelo. Cuando se implementen, la expiración de suscripción solo bloqueará compras nuevas; los pedidos pagados y las descargas ya otorgadas conservarán sus derechos.
+
+### Administración manual de planes (sin pasarela de pago)
+
+Mientras no haya cobro automático, los pagos se reciben por fuera de la plataforma y un operador los registra con el CLI de administración. Cada acción es transaccional, deja un evento en `subscription_events` y una fila en `audit_logs` con `actor_type = 'admin_cli'`.
+
+```bash
+pnpm admin list                                              # cuentas, plan, estado y vencimiento
+pnpm admin status cliente@mail.com
+pnpm admin activate cliente@mail.com --plan base --months 1 --note "transferencia 18/11"
+pnpm admin extend cliente@mail.com --days 7                  # días gratis (prueba o período pago)
+pnpm admin pilot:start cliente@mail.com                      # todo habilitado, gratis, sin vencimiento
+pnpm admin pilot:end cliente@mail.com [--trial-days 30]      # vuelve al plan base con una prueba nueva
+```
+
+- `activate` estando activo con el mismo plan extiende desde el fin del período vigente, así no se pierde tiempo pago. Si se paga durante la prueba, el período empieza ese día.
+- El piloto usa el plan `business` con `is_pilot = true` y sin `current_period_end`, así que nunca expira. Mientras dure, `activate` y `extend` se rechazan con `PILOT_ACTIVE`.
+- `pilot:end` no corta el acceso de golpe: pasa la cuenta a una prueba nueva del plan de `TRIAL_PLAN_CODE` (`TRIAL_DURATION_DAYS` por defecto; `--trial-days 0` la deja vencida).
+- En producción se ejecuta con `pnpm --filter @photo-platform/api admin:prod <comando>` después del build.
 
 La configuración inicial está documentada en [ADR-0003](docs/adr/0003-planes-suscripciones-entitlements.md).
 

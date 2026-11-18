@@ -13,7 +13,9 @@ export function AcceptInvitationPage() {
   const token = params.get("token");
   const { reload, selectStore } = useWorkspace();
   const [state, setState] = useState<"working" | "ok" | "error">(token ? "working" : "error");
-  const [message, setMessage] = useState(token ? "" : "Falta el código de la invitación en el enlace.");
+  const [message, setMessage] = useState(
+    token ? "" : "Falta el código de la invitación en el enlace.",
+  );
   const started = useRef(false);
 
   useEffect(() => {
