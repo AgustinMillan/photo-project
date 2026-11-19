@@ -3,12 +3,14 @@ import { Alert, Badge, Button, Card, Field, PageHeader, Spinner } from "../compo
 import { catalogApi, storefrontApi } from "../lib/endpoints.ts";
 import { errorMessage } from "../lib/errors.ts";
 import { formatDate, publicationLabel, storeUrl } from "../lib/format.ts";
-import type { SectionKey, StorefrontContent } from "../lib/types.ts";
+import { centsToInput, formatMoney, parsePesos } from "../lib/money.ts";
+import type { SectionKey, StorefrontContent, StorefrontService } from "../lib/types.ts";
 import { useLoad } from "../lib/useLoad.ts";
 import { useWorkspace } from "../workspace/WorkspaceContext.tsx";
 
 const SECTION_LABELS: Record<SectionKey, string> = {
   hero: "Portada",
+  services: "Servicios",
   albums: "Galerías",
   about: "Sobre mí",
   contact: "Contacto",
@@ -41,6 +43,174 @@ function TextArea({
         className="w-full border-0 border-b border-line bg-raised px-3 py-2 text-fg focus:border-accent focus:outline-none"
       />
       {hint ? <p className="text-xs text-fg-dim">{hint}</p> : null}
+    </div>
+  );
+}
+
+type PhotoOption = { id: string; label: string; thumbUrl: string };
+
+function newServiceId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  // Fallback for very old browsers: RFC 4122 v4 from Math.random.
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}
+
+function ServicesEditor({
+  services,
+  photos,
+  onChange,
+}: {
+  services: StorefrontService[];
+  photos: PhotoOption[];
+  onChange: (services: StorefrontService[]) => void;
+}) {
+  const [prices, setPrices] = useState<Record<string, string>>(() =>
+    Object.fromEntries(
+      services.map((service) => [service.id, centsToInput(service.priceFromCents)]),
+    ),
+  );
+  const [priceErrors, setPriceErrors] = useState<Record<string, boolean>>({});
+
+  function patch(id: string, changes: Partial<StorefrontService>) {
+    onChange(services.map((service) => (service.id === id ? { ...service, ...changes } : service)));
+  }
+
+  function move(index: number, delta: number) {
+    const target = index + delta;
+    if (target < 0 || target >= services.length) return;
+    const next = [...services];
+    [next[index], next[target]] = [
+      next[target] as StorefrontService,
+      next[index] as StorefrontService,
+    ];
+    onChange(next);
+  }
+
+  function add() {
+    const id = newServiceId();
+    setPrices((previous) => ({ ...previous, [id]: "" }));
+    onChange([
+      ...services,
+      { id, title: "", description: "", priceFromCents: null, coverPhotoId: null },
+    ]);
+  }
+
+  return (
+    <div className="space-y-4">
+      {services.length === 0 ? (
+        <p className="text-sm text-fg-dim">
+          Contá qué hacés: fotografía de eventos, sesiones, productos… Cada servicio tiene un botón
+          para que te consulten por WhatsApp o email.
+        </p>
+      ) : null}
+      {services.map((service, index) => (
+        <div key={service.id} className="space-y-3 rounded-ui border border-line p-3">
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-mono text-xs uppercase tracking-wider text-fg-dim">
+              Servicio {index + 1}
+            </span>
+            <span className="flex gap-1">
+              <Button
+                variant="ghost"
+                className="px-2 py-1"
+                aria-label="Subir servicio"
+                onClick={() => move(index, -1)}
+              >
+                ↑
+              </Button>
+              <Button
+                variant="ghost"
+                className="px-2 py-1"
+                aria-label="Bajar servicio"
+                onClick={() => move(index, 1)}
+              >
+                ↓
+              </Button>
+              <Button
+                variant="danger"
+                className="px-2 py-1"
+                onClick={() => onChange(services.filter((item) => item.id !== service.id))}
+              >
+                Quitar
+              </Button>
+            </span>
+          </div>
+          <Field
+            label="Nombre"
+            required
+            maxLength={80}
+            placeholder="Fotografía de eventos"
+            value={service.title}
+            onChange={(e) => patch(service.id, { title: e.target.value })}
+          />
+          <TextArea
+            label="Descripción"
+            rows={3}
+            value={service.description}
+            onChange={(value) => patch(service.id, { description: value.slice(0, 600) })}
+          />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field
+              label="Precio desde"
+              inputMode="decimal"
+              placeholder="Vacío: a consultar"
+              value={prices[service.id] ?? ""}
+              error={priceErrors[service.id] ? "Precio inválido" : undefined}
+              hint={
+                service.priceFromCents
+                  ? `Se muestra: desde ${formatMoney(service.priceFromCents)}`
+                  : "Se muestra: a consultar"
+              }
+              onChange={(e) => {
+                const raw = e.target.value;
+                setPrices((previous) => ({ ...previous, [service.id]: raw }));
+                const cents = parsePesos(raw);
+                const invalid = Number.isNaN(cents);
+                setPriceErrors((previous) => ({ ...previous, [service.id]: invalid }));
+                if (!invalid) patch(service.id, { priceFromCents: cents });
+              }}
+            />
+            <div className="space-y-1">
+              <label
+                htmlFor={`svc-cover-${service.id}`}
+                className="block font-mono text-xs uppercase tracking-wider text-fg-dim"
+              >
+                Imagen
+              </label>
+              <select
+                id={`svc-cover-${service.id}`}
+                value={service.coverPhotoId ?? ""}
+                onChange={(e) => patch(service.id, { coverPhotoId: e.target.value || null })}
+                className="w-full border-0 border-b border-line bg-raised px-3 py-2 text-fg focus:border-accent focus:outline-none"
+              >
+                <option value="">Sin imagen</option>
+                {photos.map((photo) => (
+                  <option key={photo.id} value={photo.id}>
+                    {photo.label}
+                  </option>
+                ))}
+              </select>
+              {service.coverPhotoId ? (
+                <img
+                  alt=""
+                  className="mt-2 h-20 w-full rounded-ui object-cover"
+                  src={photos.find((photo) => photo.id === service.coverPhotoId)?.thumbUrl}
+                />
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ))}
+      {services.length < 12 ? (
+        <Button variant="ghost" onClick={add}>
+          + Agregar servicio
+        </Button>
+      ) : (
+        <p className="text-xs text-fg-dim">Máximo 12 servicios.</p>
+      )}
     </div>
   );
 }
@@ -89,6 +259,10 @@ export function StorefrontEditorPage() {
   async function save(event?: FormEvent) {
     event?.preventDefault();
     if (!draft) return false;
+    if (draft.services.some((service) => !service.title.trim())) {
+      setMessage({ tone: "error", text: "Cada servicio necesita un nombre." });
+      return false;
+    }
     setSaving(true);
     setMessage(null);
     try {
@@ -285,6 +459,20 @@ export function StorefrontEditorPage() {
               />
             </div>
           </Card>
+
+          <div className="lg:col-span-2">
+            <Card title="Servicios">
+              <ServicesEditor
+                services={draft.services}
+                photos={coverOptions.map((photo) => ({
+                  id: photo.id,
+                  label: photo.title || photo.originalFilename,
+                  thumbUrl: photo.thumbUrl,
+                }))}
+                onChange={(services) => update("services", services)}
+              />
+            </Card>
+          </div>
 
           <Card title="Secciones">
             <ul className="divide-y divide-line">

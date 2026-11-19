@@ -40,7 +40,25 @@ export function defaultStorefrontContent(storeName: string): StorefrontContent {
     paymentInstructions: "",
     watermarkText: storeName,
     sections: STOREFRONT_SECTION_KEYS.map((key) => ({ key, enabled: true })),
+    services: [],
   };
+}
+
+/**
+ * Content saved before a section existed is upgraded on read: missing sections
+ * are inserted at their default position (keeping the store's own order for the
+ * rest) and missing lists default to empty.
+ */
+export function normalizeStorefrontContent(content: StorefrontContent): StorefrontContent {
+  const present = new Set(content.sections.map((section) => section.key));
+  const sections = [...content.sections].filter((section) =>
+    (STOREFRONT_SECTION_KEYS as readonly string[]).includes(section.key),
+  );
+  STOREFRONT_SECTION_KEYS.forEach((key, index) => {
+    if (!present.has(key))
+      sections.splice(Math.min(index, sections.length), 0, { key, enabled: true });
+  });
+  return { ...content, sections, services: content.services ?? [] };
 }
 
 async function readDraft(storeId: string, storeName: string): Promise<StorefrontContent> {
@@ -49,7 +67,7 @@ async function readDraft(storeId: string, storeName: string): Promise<Storefront
     .from(storeProfiles)
     .where(eq(storeProfiles.storeId, storeId))
     .limit(1);
-  return profile?.draft ?? defaultStorefrontContent(storeName);
+  return normalizeStorefrontContent(profile?.draft ?? defaultStorefrontContent(storeName));
 }
 
 /** Draft content used by uploads (watermark) and checkout (payment instructions). */
@@ -65,7 +83,9 @@ async function latestPublication(storeId: string) {
     .where(eq(storePublications.storeId, storeId))
     .orderBy(desc(storePublications.version))
     .limit(1);
-  return publication ?? null;
+  return publication
+    ? { ...publication, content: normalizeStorefrontContent(publication.content) }
+    : null;
 }
 
 export async function getStorefrontAdmin(access: StoreAccess) {
@@ -85,6 +105,24 @@ export async function getStorefrontAdmin(access: StoreAccess) {
 
 function sameOrder(a: readonly string[], b: readonly string[]): boolean {
   return a.length === b.length && a.every((key, index) => key === b[index]);
+}
+
+async function prepareCoverPhoto(storeId: string, photoId: string): Promise<void> {
+  const [photo] = await db
+    .select({ assetId: mediaAssets.id, originalKey: mediaAssets.originalKey })
+    .from(photos)
+    .innerJoin(photoVersions, currentVersionJoin)
+    .innerJoin(mediaAssets, eq(mediaAssets.id, photoVersions.mediaAssetId))
+    .where(and(eq(photos.id, photoId), eq(photos.storeId, storeId)))
+    .limit(1);
+  if (!photo) {
+    throw new AppError({
+      statusCode: 400,
+      code: "COVER_PHOTO_NOT_FOUND",
+      message: "The cover photo does not belong to this store.",
+    });
+  }
+  await ensureCoverVariant(photo.assetId, photo.originalKey);
 }
 
 export async function updateStorefrontDraft(
@@ -112,22 +150,16 @@ export async function updateStorefrontDraft(
     }
   }
 
-  if (input.coverPhotoId) {
-    const [photo] = await db
-      .select({ id: photos.id, assetId: mediaAssets.id, originalKey: mediaAssets.originalKey })
-      .from(photos)
-      .innerJoin(photoVersions, currentVersionJoin)
-      .innerJoin(mediaAssets, eq(mediaAssets.id, photoVersions.mediaAssetId))
-      .where(and(eq(photos.id, input.coverPhotoId), eq(photos.storeId, access.store.id)))
-      .limit(1);
-    if (photo) await ensureCoverVariant(photo.assetId, photo.originalKey);
-    if (!photo) {
-      throw new AppError({
-        statusCode: 400,
-        code: "COVER_PHOTO_NOT_FOUND",
-        message: "The cover photo does not belong to this store.",
-      });
-    }
+  // The hero and every service image get an un-watermarked cover rendition.
+  const coverIds = [
+    ...new Set(
+      [input.coverPhotoId, ...input.services.map((service) => service.coverPhotoId)].filter(
+        (id): id is string => Boolean(id),
+      ),
+    ),
+  ];
+  for (const photoId of coverIds) {
+    await prepareCoverPhoto(access.store.id, photoId);
   }
 
   const draft: StorefrontContent = { ...input, coverPhotoId: input.coverPhotoId ?? null };
@@ -346,7 +378,16 @@ export async function getPublicStorefront(rawHostname: string) {
       payments,
     },
     publication: { version: publication.version, publishedAt: publication.createdAt },
-    content: { ...content, coverUrl: await heroUrlForPhoto(store.id, content.coverPhotoId) },
+    content: {
+      ...content,
+      coverUrl: await heroUrlForPhoto(store.id, content.coverPhotoId),
+      services: await Promise.all(
+        content.services.map(async ({ coverPhotoId, ...service }) => ({
+          ...service,
+          coverUrl: await heroUrlForPhoto(store.id, coverPhotoId),
+        })),
+      ),
+    },
     albums: albumViews.filter((album) => album.photoCount > 0),
     photos: await publicPhotos(store.id, null),
   };

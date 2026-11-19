@@ -111,7 +111,10 @@ async function createAlbum(owner: Owner, payload: Record<string, unknown>) {
   return response.json().album as { id: string };
 }
 
-const sections = ["hero", "albums", "about", "contact"].map((key) => ({ key, enabled: true }));
+const sections = ["hero", "services", "albums", "about", "contact"].map((key) => ({
+  key,
+  enabled: true,
+}));
 
 function profile(overrides: Record<string, unknown> = {}) {
   return {
@@ -259,6 +262,88 @@ describe("storefront drafts and publications", () => {
 
     const otherCover = other.thumbUrl.replace("thumb.webp", "cover.webp");
     expect((await app.inject({ method: "GET", url: otherCover })).statusCode).toBe(404);
+  });
+
+  it("publishes services with an un-watermarked image and a starting price", async () => {
+    const owner = await createOwner("services@example.com", "services-studio");
+    const photo = (await upload(owner, await image("#887766"))).json().photo;
+    const services = [
+      {
+        id: "0b5d2f2e-6f1a-4f0e-9f4e-0d4a8a1d6c01",
+        title: "Fotografía de eventos",
+        description: "Casamientos, cumpleaños y egresos.",
+        priceFromCents: 15000000,
+        coverPhotoId: photo.id,
+      },
+      {
+        id: "0b5d2f2e-6f1a-4f0e-9f4e-0d4a8a1d6c02",
+        title: "Fotografía de productos",
+        description: "",
+        priceFromCents: null,
+        coverPhotoId: null,
+      },
+    ];
+    await saveAndPublish(owner, { services });
+
+    const content = (await publicGet(owner.host, "/api/v1/public/storefront")).json().content;
+    expect(content.services).toHaveLength(2);
+    expect(content.services[0]).toMatchObject({
+      title: "Fotografía de eventos",
+      priceFromCents: 15000000,
+    });
+    expect(content.services[0].coverUrl).toMatch(/cover\.webp$/);
+    expect(content.services[0]).not.toHaveProperty("coverPhotoId");
+    expect(content.services[1]).toMatchObject({ priceFromCents: null, coverUrl: null });
+
+    const foreign = await createOwner("foreign@example.com", "foreign-studio");
+    const foreignPhoto = (await upload(foreign, await image("#112233"))).json().photo;
+    const rejected = await app.inject({
+      method: "PUT",
+      url: `/api/v1/stores/${owner.storeId}/storefront`,
+      headers: auth(owner.token),
+      payload: profile({ services: [{ ...services[0], coverPhotoId: foreignPhoto.id }] }),
+    });
+    expect(rejected.statusCode).toBe(400);
+  });
+
+  it("upgrades storefronts saved before the services section existed", async () => {
+    const owner = await createOwner("legacy@example.com", "legacy-studio");
+    const legacy = {
+      ...profile({ tagline: "Vieja" }),
+      sections: [
+        { key: "hero", enabled: true },
+        { key: "albums", enabled: false },
+        { key: "about", enabled: true },
+        { key: "contact", enabled: true },
+      ],
+    } as Record<string, unknown>;
+    delete legacy.services;
+    await client`insert into store_profiles (store_id, draft) values (${owner.storeId}, ${client.json(legacy as never)})`;
+
+    const admin = await app.inject({
+      method: "GET",
+      url: `/api/v1/stores/${owner.storeId}/storefront`,
+      headers: auth(owner.token),
+    });
+    const draft = admin.json().draft;
+    expect(draft.services).toEqual([]);
+    expect(draft.sections.map((s: { key: string }) => s.key)).toEqual([
+      "hero",
+      "services",
+      "albums",
+      "about",
+      "contact",
+    ]);
+    expect(draft.sections.find((s: { key: string }) => s.key === "albums").enabled).toBe(false);
+
+    // Saving the upgraded draft back works on a plan without section reordering.
+    const saved = await app.inject({
+      method: "PUT",
+      url: `/api/v1/stores/${owner.storeId}/storefront`,
+      headers: auth(owner.token),
+      payload: draft,
+    });
+    expect(saved.statusCode).toBe(200);
   });
 
   it("rejects section reordering on plans without the entitlement", async () => {

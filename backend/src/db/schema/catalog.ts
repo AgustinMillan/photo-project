@@ -22,8 +22,17 @@ import { users } from "./users.js";
 // Phase 3 — storefront profile (draft) and immutable publications
 // ---------------------------------------------------------------------------
 
-export const STOREFRONT_SECTION_KEYS = ["hero", "albums", "about", "contact"] as const;
+export const STOREFRONT_SECTION_KEYS = ["hero", "services", "albums", "about", "contact"] as const;
 export type StorefrontSectionKey = (typeof STOREFRONT_SECTION_KEYS)[number];
+
+export type StorefrontService = {
+  id: string;
+  title: string;
+  description: string;
+  // Starting price ("desde"). Null shows "A consultar".
+  priceFromCents: number | null;
+  coverPhotoId: string | null;
+};
 
 export type StorefrontContent = {
   displayName: string;
@@ -37,6 +46,7 @@ export type StorefrontContent = {
   paymentInstructions: string;
   watermarkText: string;
   sections: Array<{ key: StorefrontSectionKey; enabled: boolean }>;
+  services: StorefrontService[];
 };
 
 export const storeProfiles = pgTable("store_profiles", {
