@@ -58,6 +58,10 @@ export const DEFAULT_THEME: StorefrontTheme = {
   ...TEMPLATES.nocturne.colors,
 };
 
+export function isTemplate(value: unknown): value is StorefrontTemplate {
+  return typeof value === "string" && value in TEMPLATES;
+}
+
 export function templateDefaults(template: StorefrontTemplate): StorefrontTheme {
   return { template, ...TEMPLATES[template].colors };
 }
@@ -223,7 +227,7 @@ export function loadTemplateFonts(template: StorefrontTemplate) {
 const THEME_CACHE_KEY = "galeriza-theme";
 
 /** Apply the store look to the whole page (public storefront only). */
-export function applyThemeToDocument(theme: StorefrontTheme | undefined | null) {
+export function applyThemeToDocument(theme: StorefrontTheme | undefined | null, remember = true) {
   const root = document.documentElement;
   const resolved = safe(theme);
   for (const [name, value] of Object.entries(themeVars(resolved))) {
@@ -232,6 +236,7 @@ export function applyThemeToDocument(theme: StorefrontTheme | undefined | null) 
   root.dataset.template = resolved.template;
   loadTemplateFonts(resolved.template);
   document.querySelector('meta[name="theme-color"]')?.setAttribute("content", resolved.background);
+  if (!remember) return;
   try {
     localStorage.setItem(THEME_CACHE_KEY, JSON.stringify(resolved));
   } catch {

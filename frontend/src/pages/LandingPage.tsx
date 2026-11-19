@@ -1,6 +1,9 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext.tsx";
+import { ThemeSample } from "../components/ThemeEditor.tsx";
+import { TEMPLATE_ORDER, TEMPLATES, templateDefaults } from "../lib/theme.ts";
+import type { PublicStorefront } from "../lib/types.ts";
 import { trackVisit } from "../lib/visit.ts";
 
 const SUPPORT_EMAIL = import.meta.env.VITE_SUPPORT_EMAIL || "";
@@ -32,7 +35,7 @@ const FEATURES = [
   },
   {
     title: "Fotos protegidas",
-    text: "En la tienda se ven vistas previas con marca de agua. Los originales solo los descarga quien pagó.",
+    text: "Vos elegís cómo se ven: marca de agua, blanco y negro o difuminadas para descubrir con el dedo. Los originales solo los descarga quien pagó.",
   },
   {
     title: "Galerías por evento",
@@ -99,6 +102,75 @@ const FAQ = [
   },
 ];
 
+type DemoMedia = { photos: string[]; titles: string[] };
+
+/** Real photos from the demo store, so the three styles are shown with actual pictures. */
+function useDemoMedia(): DemoMedia | null {
+  const [media, setMedia] = useState<DemoMedia | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`${DEMO_STORE_URL}/api/v1/public/storefront`)
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data: PublicStorefront | null) => {
+        if (!data || cancelled) return;
+        const absolute = (url: string | null | undefined) =>
+          url ? `${DEMO_STORE_URL}${url}` : null;
+        const photos = [
+          absolute(data.content.coverUrl),
+          ...data.albums.map((album) => absolute(album.coverUrl)),
+        ].filter((url): url is string => Boolean(url));
+        setMedia({ photos, titles: data.albums.map((album) => album.title) });
+      })
+      .catch(() => {
+        // Without network the samples fall back to color blocks.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  return media;
+}
+
+function StylesShowcase() {
+  const media = useDemoMedia();
+  return (
+    <section id="estilos" className="border-y border-line/60 bg-surface/40">
+      <div className="mx-auto max-w-6xl px-5 py-16">
+        <h2 className="font-display text-3xl">Tu tienda, con tu estilo</h2>
+        <p className="mt-2 max-w-2xl text-fg-muted">
+          Elegí entre tres plantillas y cambiá los colores a tu gusto. Los textos se ajustan solos
+          para que siempre se lean bien.
+        </p>
+        <ul className="mt-8 grid gap-6 lg:grid-cols-3">
+          {TEMPLATE_ORDER.map((template) => (
+            <li key={template} className="flex flex-col">
+              <ThemeSample
+                theme={templateDefaults(template)}
+                name="Estudio Andes"
+                tagline="Paisaje y producto"
+                photos={media?.photos ?? []}
+                titles={media?.titles.length ? media.titles : ["Montañas", "Flores", "Café"]}
+              />
+              <div className="mt-3 flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="font-medium text-fg">{TEMPLATES[template].name}</h3>
+                  <p className="text-sm text-fg-dim">{TEMPLATES[template].description}</p>
+                </div>
+                <a
+                  href={`${DEMO_STORE_URL}/?plantilla=${template}`}
+                  className="shrink-0 text-sm text-accent hover:text-accent-soft"
+                >
+                  Ver en vivo →
+                </a>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
 function MockStorefront() {
   // Decorative preview of a storefront, drawn with gradients (no real photos).
   const tiles = [
@@ -155,6 +227,9 @@ export function LandingPage() {
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-4">
           <span className="font-display text-xl">Galeriza</span>
           <nav className="flex items-center gap-3 text-sm">
+            <a href="#estilos" className="hidden text-fg-muted hover:text-fg sm:inline">
+              Estilos
+            </a>
             <a href="#precio" className="hidden text-fg-muted hover:text-fg sm:inline">
               Precio
             </a>
@@ -246,6 +321,8 @@ export function LandingPage() {
             ))}
           </ul>
         </section>
+
+        <StylesShowcase />
 
         <section id="precio" className="border-y border-line/60 bg-surface/40">
           <div className="mx-auto max-w-6xl px-5 py-16">

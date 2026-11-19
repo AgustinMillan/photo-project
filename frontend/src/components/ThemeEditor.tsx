@@ -23,11 +23,15 @@ export function ThemeSample({
   theme,
   name,
   photos = [],
+  titles = ["Casamiento", "Quince", "Retratos"],
+  tagline = "Fotografía de eventos y retratos",
   compact = false,
 }: {
   theme: StorefrontTheme;
   name: string;
   photos?: string[];
+  titles?: string[];
+  tagline?: string;
   compact?: boolean;
 }) {
   useEffect(() => loadTemplateFonts(theme.template), [theme.template]);
@@ -81,7 +85,7 @@ export function ThemeSample({
         <div className="absolute inset-0 bg-gradient-to-t from-void via-void/40 to-transparent" />
         <div className="relative px-4 pb-4">
           <p className="font-display text-3xl text-fg">{name}</p>
-          <p className="mt-1 text-sm text-fg-muted">Fotografía de eventos y retratos</p>
+          <p className="mt-1 text-sm text-fg-muted">{tagline}</p>
         </div>
       </div>
       <div className="px-4 pt-5 pb-5">
@@ -101,7 +105,7 @@ export function ThemeSample({
               <p
                 className={`mt-2 font-display text-sm ${i === 1 ? "text-accent-soft" : "text-fg"}`}
               >
-                {["Casamiento", "Quince", "Retratos"][i]}
+                {titles[i]}
               </p>
               <p className="text-[11px] text-fg-dim">24 fotos</p>
             </div>

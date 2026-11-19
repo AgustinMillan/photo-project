@@ -14,13 +14,21 @@ import { serviceContactUrl } from "../lib/contact.ts";
 import { shopApi } from "../lib/endpoints.ts";
 import { errorMessage } from "../lib/errors.ts";
 import { formatMoney } from "../lib/money.ts";
-import { applyCachedTheme, applyThemeToDocument } from "../lib/theme.ts";
+import {
+  applyCachedTheme,
+  applyThemeToDocument,
+  isTemplate,
+  TEMPLATE_ORDER,
+  TEMPLATES,
+  templateDefaults,
+} from "../lib/theme.ts";
 import type {
   CouponCheck,
   PhotoProtection,
   Promotion,
   PublicPhoto,
   PublicStorefront,
+  StorefrontTemplate,
 } from "../lib/types.ts";
 import { useLoad } from "../lib/useLoad.ts";
 import { trackVisit } from "../lib/visit.ts";
@@ -58,6 +66,33 @@ function DemoBanner() {
       <a href={platformSignupUrl()} className="font-medium underline underline-offset-2">
         Creá la tuya gratis →
       </a>
+    </div>
+  );
+}
+
+function TemplateSwitcher({
+  current,
+  onChange,
+}: {
+  current: StorefrontTemplate;
+  onChange: (template: StorefrontTemplate) => void;
+}) {
+  return (
+    <div className="fixed bottom-4 left-1/2 z-40 flex -translate-x-1/2 items-center gap-1 rounded-ui border border-line bg-surface/95 p-1 shadow-2xl backdrop-blur">
+      <span className="hidden px-2 font-mono text-[10px] uppercase tracking-wider text-fg-dim sm:inline">
+        Probá otro estilo
+      </span>
+      {TEMPLATE_ORDER.map((template) => (
+        <button
+          key={template}
+          type="button"
+          aria-pressed={current === template}
+          onClick={() => onChange(template)}
+          className={`rounded-ui px-3 py-1.5 text-sm ${current === template ? "bg-accent text-on-accent" : "text-fg-muted hover:text-fg"}`}
+        >
+          {TEMPLATES[template].name}
+        </button>
+      ))}
     </div>
   );
 }
@@ -966,9 +1001,19 @@ function StorefrontRoutes() {
     if (storefront.data) document.title = storefront.data.content.displayName;
   }, [storefront.data]);
 
+  // The demo store lets visitors try every template (?plantilla=claro links from the landing).
+  const [demoTemplate, setDemoTemplate] = useState<StorefrontTemplate | null>(() => {
+    const requested = new URLSearchParams(window.location.search).get("plantilla");
+    return isTemplate(requested) ? requested : null;
+  });
+
   useLayoutEffect(() => {
-    if (storefront.data) applyThemeToDocument(storefront.data.content.theme);
-  }, [storefront.data]);
+    const data = storefront.data;
+    if (!data) return;
+    if (data.store.isDemo && demoTemplate)
+      applyThemeToDocument(templateDefaults(demoTemplate), false);
+    else applyThemeToDocument(data.content.theme);
+  }, [storefront.data, demoTemplate]);
 
   if (storefront.loading) return <Loading />;
   if (storefront.error || !storefront.data) {
@@ -986,6 +1031,12 @@ function StorefrontRoutes() {
   const data = storefront.data;
   return (
     <Shell data={data}>
+      {data.store.isDemo ? (
+        <TemplateSwitcher
+          current={demoTemplate ?? data.content.theme?.template ?? "nocturne"}
+          onChange={setDemoTemplate}
+        />
+      ) : null}
       <Routes>
         <Route path="/" element={<HomePage data={data} />} />
         <Route
