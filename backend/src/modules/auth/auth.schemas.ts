@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { emailSchema } from "../../shared/validation/email.js";
+import { attributionInputSchema } from "../analytics/attribution.js";
 
 export { emailSchema };
 
@@ -14,6 +15,7 @@ export const registerSchema = z.object({
   email: emailSchema,
   password: passwordSchema,
   displayName: z.string().trim().min(1).max(120).optional(),
+  attribution: attributionInputSchema.optional(),
 });
 
 export const loginSchema = z.object({

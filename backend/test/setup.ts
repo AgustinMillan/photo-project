@@ -16,4 +16,5 @@ process.env.MP_WEBHOOK_SECRET =
 process.env.MP_API_BASE = "https://mp.test";
 process.env.MP_AUTH_BASE = "https://auth.mp.test";
 process.env.APP_URL = process.env.APP_URL ?? "http://localhost:5173";
+process.env.DEMO_STORE_SLUGS = process.env.DEMO_STORE_SLUGS ?? "ejemplo";
 process.env.PLATFORM_ADMIN_EMAILS = process.env.PLATFORM_ADMIN_EMAILS ?? "founder@example.com";

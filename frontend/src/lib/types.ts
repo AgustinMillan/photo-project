@@ -147,6 +147,19 @@ export type StoreStats = {
   }[];
   topAlbums: { id: string; title: string; sales: number; revenueCents: number }[];
   paymentMethods: { method: string; orders: number }[];
+  sources: { source: string; visitors: number }[];
+};
+
+export type AttributionRow = {
+  source: string;
+  campaign: string;
+  content: string;
+  visitors: number;
+  signups: number;
+  withStore: number;
+  published: number;
+  withSale: number;
+  withAutoPay: number;
 };
 
 export type Entitlement = {
@@ -315,6 +328,7 @@ export type PublicStorefront = {
     name: string;
     slug: string;
     purchasesEnabled: boolean;
+    isDemo?: boolean;
     currency: string;
     payments: { mercadopago: boolean; transfer: boolean };
   };

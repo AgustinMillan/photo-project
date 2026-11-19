@@ -50,6 +50,7 @@ describe("schema", () => {
       "subscription_events",
       "subscription_payments",
       "subscriptions",
+      "user_attribution",
       "user_sessions",
       "users",
     ]);

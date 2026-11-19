@@ -92,6 +92,13 @@ export async function storeHostname(storeId: string): Promise<string | null> {
 
 export async function createOrder(rawHostname: string, input: CreateOrderInput) {
   const store = await requirePublishedStoreByHost(rawHostname);
+  if (env.DEMO_STORE_SLUGS.includes(store.slug.toLowerCase())) {
+    throw new AppError({
+      statusCode: 409,
+      code: "STORE_IS_DEMO",
+      message: "This is a showcase store; it does not take orders.",
+    });
+  }
   await assertStorePurchasesEnabled(store.id);
 
   const albumIds = [...new Set(input.items.filter((i) => i.type === "album").map((i) => i.id))];

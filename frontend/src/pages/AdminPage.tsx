@@ -16,7 +16,7 @@ import { adminApi } from "../lib/endpoints.ts";
 import { errorMessage } from "../lib/errors.ts";
 import { formatDate } from "../lib/format.ts";
 import { formatMoney } from "../lib/money.ts";
-import type { AdminAccount, AdminAction, AdminOverview } from "../lib/types.ts";
+import type { AdminAccount, AdminAction, AdminOverview, AttributionRow } from "../lib/types.ts";
 import { useLoad } from "../lib/useLoad.ts";
 
 const STATUS: Record<
@@ -280,6 +280,9 @@ export function AdminPage() {
             ) : null}
 
             {overview.data ? <Funnel funnel={overview.data.funnel} days={days} /> : null}
+
+            <AttributionTable days={days} />
+            <AdLinkBuilder />
 
             <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <Stat
@@ -633,6 +636,129 @@ function Funnel({ funnel, days }: { funnel: AdminOverview["funnel"]; days: numbe
           );
         })}
       </ol>
+    </Card>
+  );
+}
+
+const SOURCE_NAMES: Record<string, string> = {
+  "": "Directo / sin dato",
+  instagram: "Instagram",
+  facebook: "Facebook",
+  google: "Google",
+  whatsapp: "WhatsApp",
+};
+
+function AttributionTable({ days }: { days: number }) {
+  const { data, error, loading } = useLoad(() => adminApi.attribution(days), [days]);
+  const rows: AttributionRow[] = data?.rows ?? [];
+  return (
+    <Card title={`De dónde vienen (últimos ${days} días)`}>
+      {loading && !data ? <Spinner /> : null}
+      {error ? <Alert>{errorMessage(error)}</Alert> : null}
+      {data && rows.length === 0 ? (
+        <p className="text-sm text-fg-dim">Todavía no hay visitas ni registros en este período.</p>
+      ) : null}
+      {rows.length > 0 ? (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[42rem] text-left text-sm">
+            <thead className="font-mono text-xs uppercase tracking-wider text-fg-dim">
+              <tr>
+                <th className="py-2 font-normal">Origen</th>
+                <th className="py-2 font-normal">Campaña / anuncio</th>
+                <th className="py-2 text-right font-normal">Visitantes</th>
+                <th className="py-2 text-right font-normal">Registros</th>
+                <th className="py-2 text-right font-normal">Tienda</th>
+                <th className="py-2 text-right font-normal">Publicada</th>
+                <th className="py-2 text-right font-normal">Venta</th>
+                <th className="py-2 text-right font-normal">Pago aut.</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-line">
+              {rows.map((row) => (
+                <tr key={`${row.source}|${row.campaign}|${row.content}`}>
+                  <td className="py-2 text-fg">{SOURCE_NAMES[row.source] ?? row.source}</td>
+                  <td className="py-2 text-fg-muted">
+                    {[row.campaign, row.content].filter(Boolean).join(" · ") || "—"}
+                  </td>
+                  <td className="py-2 text-right text-fg">{row.visitors}</td>
+                  <td className="py-2 text-right text-fg">
+                    {row.signups}
+                    {row.visitors > 0 && row.signups > 0 ? (
+                      <span className="ml-1 text-xs text-fg-dim">
+                        {Math.round((row.signups / row.visitors) * 100)}%
+                      </span>
+                    ) : null}
+                  </td>
+                  <td className="py-2 text-right text-fg">{row.withStore}</td>
+                  <td className="py-2 text-right text-fg">{row.published}</td>
+                  <td className="py-2 text-right text-fg">{row.withSale}</td>
+                  <td className="py-2 text-right text-fg">{row.withAutoPay}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+    </Card>
+  );
+}
+
+function slugPart(value: string): string {
+  return value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+/** Builds the link to use in an ad so its visits and sign-ups are identified. */
+function AdLinkBuilder() {
+  const [source, setSource] = useState("instagram");
+  const [campaign, setCampaign] = useState("prueba-1");
+  const [content, setContent] = useState("");
+  const [copied, setCopied] = useState(false);
+  const url = new URL(window.location.origin);
+  url.searchParams.set("utm_source", slugPart(source) || "instagram");
+  url.searchParams.set("utm_medium", "paid");
+  if (slugPart(campaign)) url.searchParams.set("utm_campaign", slugPart(campaign));
+  if (slugPart(content)) url.searchParams.set("utm_content", slugPart(content));
+  const link = url.toString();
+
+  return (
+    <Card title="Link para un anuncio">
+      <p className="mb-4 text-sm text-fg-dim">
+        Usa un link distinto por cada anuncio (cambia el “anuncio”), así ves en la tabla de arriba
+        cuál trae fotógrafos que realmente publican su tienda.
+      </p>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Field label="Red" value={source} onChange={(event) => setSource(event.target.value)} />
+        <Field
+          label="Campaña"
+          value={campaign}
+          onChange={(event) => setCampaign(event.target.value)}
+        />
+        <Field
+          label="Anuncio"
+          value={content}
+          placeholder="ej: sin-wetransfer"
+          onChange={(event) => setContent(event.target.value)}
+        />
+      </div>
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <code className="break-all rounded-ui bg-raised px-3 py-2 text-xs text-fg">{link}</code>
+        <Button
+          variant="ghost"
+          onClick={() => {
+            void navigator.clipboard?.writeText(link).then(() => {
+              setCopied(true);
+              window.setTimeout(() => setCopied(false), 1500);
+            });
+          }}
+        >
+          {copied ? "Copiado" : "Copiar"}
+        </Button>
+      </div>
     </Card>
   );
 }

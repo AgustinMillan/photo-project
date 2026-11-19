@@ -4,6 +4,7 @@ import { useAuth } from "../auth/AuthContext.tsx";
 import { trackVisit } from "../lib/visit.ts";
 
 const SUPPORT_EMAIL = import.meta.env.VITE_SUPPORT_EMAIL || "";
+const DEMO_STORE_URL = `https://ejemplo.${import.meta.env.VITE_PLATFORM_DOMAIN || "localhost"}`;
 
 const STEPS = [
   {
@@ -206,10 +207,10 @@ export function LandingPage() {
                 Probar gratis 30 días
               </Link>
               <a
-                href="#como-funciona"
+                href={DEMO_STORE_URL}
                 className="rounded-ui border border-line px-6 py-3 text-fg-muted hover:border-accent"
               >
-                Cómo funciona
+                Ver una tienda de ejemplo
               </a>
             </div>
             <p className="mt-4 text-sm text-fg-dim">
