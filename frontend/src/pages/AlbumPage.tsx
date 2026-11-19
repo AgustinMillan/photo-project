@@ -10,6 +10,12 @@ import { useWorkspace } from "../workspace/WorkspaceContext.tsx";
 
 type UploadState = { total: number; done: number; failed: string[] };
 
+export type PhotoEdit = {
+  title?: string;
+  priceCents?: number | null;
+  status?: "published" | "draft";
+};
+
 function PhotoCard({
   photo,
   storeId,
@@ -18,6 +24,8 @@ function PhotoCard({
   onChanged,
   isCover,
   onMakeCover,
+  edit,
+  onEdit,
 }: {
   photo: Photo;
   storeId: string;
@@ -26,9 +34,13 @@ function PhotoCard({
   onChanged: () => void;
   isCover: boolean;
   onMakeCover?: () => void;
+  edit: PhotoEdit | undefined;
+  onEdit: (change: PhotoEdit) => void;
 }) {
-  const [title, setTitle] = useState(photo.title);
-  const [price, setPrice] = useState(centsToInput(photo.priceCents));
+  const title = edit?.title ?? photo.title;
+  const status = edit?.status ?? photo.status;
+  const priceCents = edit && "priceCents" in edit ? (edit.priceCents ?? null) : photo.priceCents;
+  const [price, setPrice] = useState(centsToInput(priceCents));
   const [error, setError] = useState<string | null>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const replaceInput = useRef<HTMLInputElement>(null);
@@ -43,10 +55,11 @@ function PhotoCard({
     }
   }
 
-  async function savePrice() {
+  function savePrice() {
     const cents = parsePesos(price);
     if (Number.isNaN(cents)) return setError("Precio inválido");
-    if (cents !== photo.priceCents) await patch({ priceCents: cents });
+    setError(null);
+    if (cents !== priceCents) onEdit({ priceCents: cents });
   }
 
   async function replace(event: ChangeEvent<HTMLInputElement>) {
@@ -63,7 +76,9 @@ function PhotoCard({
 
   return (
     <li
-      className={`overflow-hidden rounded-ui border bg-surface ${selected ? "border-accent" : "border-line"}`}
+      className={`overflow-hidden rounded-ui border bg-surface ${
+        selected ? "border-accent" : edit ? "border-dashed border-accent/70" : "border-line"
+      }`}
     >
       <div className="relative aspect-square bg-raised">
         <img
@@ -77,10 +92,15 @@ function PhotoCard({
           Elegir
         </label>
         <span className="absolute top-2 right-2">
-          <Badge tone={photo.status === "published" ? "ok" : "neutral"}>
-            {photo.status === "published" ? "Visible" : "Oculta"}
+          <Badge tone={status === "published" ? "ok" : "neutral"}>
+            {status === "published" ? "Visible" : "Oculta"}
           </Badge>
         </span>
+        {edit ? (
+          <span className="absolute right-2 bottom-2">
+            <Badge tone="warn">Sin guardar</Badge>
+          </span>
+        ) : null}
         {isCover ? (
           <span className="absolute bottom-2 left-2">
             <Badge tone="warn">Portada</Badge>
@@ -91,8 +111,7 @@ function PhotoCard({
         <input
           aria-label="Título"
           value={title}
-          onChange={(event) => setTitle(event.target.value)}
-          onBlur={() => title !== photo.title && void patch({ title })}
+          onChange={(event) => onEdit({ title: event.target.value })}
           className="w-full border-0 border-b border-line bg-transparent px-1 py-1 text-sm text-fg focus:border-accent focus:outline-none"
         />
         <div className="flex items-center gap-2">
@@ -103,7 +122,7 @@ function PhotoCard({
             placeholder="Sin precio"
             value={price}
             onChange={(event) => setPrice(event.target.value)}
-            onBlur={() => void savePrice()}
+            onBlur={savePrice}
             className="w-full border-0 border-b border-line bg-transparent px-1 py-1 text-sm text-fg focus:border-accent focus:outline-none"
           />
         </div>
@@ -111,11 +130,9 @@ function PhotoCard({
           <button
             type="button"
             className="text-accent-soft hover:underline"
-            onClick={() =>
-              void patch({ status: photo.status === "published" ? "draft" : "published" })
-            }
+            onClick={() => onEdit({ status: status === "published" ? "draft" : "published" })}
           >
-            {photo.status === "published" ? "Ocultar" : "Mostrar"}
+            {status === "published" ? "Ocultar" : "Mostrar"}
           </button>
           {onMakeCover && !isCover ? (
             <button type="button" className="text-fg-dim hover:text-fg" onClick={onMakeCover}>
@@ -199,7 +216,20 @@ export function AlbumPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkPrice, setBulkPrice] = useState("");
   const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
+  const [edits, setEdits] = useState<Record<string, PhotoEdit>>({});
+  const [saving, setSaving] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
+  const pendingCount = Object.keys(edits).length;
+
+  // Warn before leaving the page with unsaved photo edits.
+  useEffect(() => {
+    if (pendingCount === 0) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [pendingCount]);
 
   useEffect(() => {
     if (album) {
@@ -209,7 +239,8 @@ export function AlbumPage() {
     }
   }, [album]);
 
-  if (!currentStore || albums.loading) return <Spinner />;
+  // Only the first load shows a spinner; later refreshes keep the page in place.
+  if (!currentStore || (albums.loading && !albums.data)) return <Spinner />;
   if (!loose && !album) {
     return (
       <Alert>
@@ -297,6 +328,49 @@ export function AlbumPage() {
     } catch (caught) {
       setMessage({ tone: "error", text: errorMessage(caught) });
     }
+  }
+
+  function editPhoto(photo: Photo, change: PhotoEdit) {
+    setEdits((previous) => {
+      const merged: PhotoEdit = { ...previous[photo.id], ...change };
+      // Drop fields that went back to the saved value.
+      if (merged.title !== undefined && merged.title === photo.title) delete merged.title;
+      if (merged.status !== undefined && merged.status === photo.status) delete merged.status;
+      if ("priceCents" in merged && merged.priceCents === photo.priceCents)
+        delete merged.priceCents;
+      const next = { ...previous };
+      if (Object.keys(merged).length === 0) delete next[photo.id];
+      else next[photo.id] = merged;
+      return next;
+    });
+  }
+
+  async function saveEdits() {
+    setSaving(true);
+    setMessage(null);
+    const entries = Object.entries(edits);
+    const failed: string[] = [];
+    const remaining: Record<string, PhotoEdit> = {};
+    for (const [photoId, change] of entries) {
+      try {
+        await catalogApi.updatePhoto(storeId, photoId, change);
+      } catch (caught) {
+        failed.push(errorMessage(caught));
+        remaining[photoId] = change;
+      }
+    }
+    setEdits(remaining);
+    setSaving(false);
+    photos.reload();
+    albums.reload();
+    setMessage(
+      failed.length === 0
+        ? {
+            tone: "ok",
+            text: `Guardamos los cambios de ${entries.length} ${entries.length === 1 ? "foto" : "fotos"}.`,
+          }
+        : { tone: "error", text: `No pudimos guardar ${failed.length} fotos: ${failed[0]}` },
+    );
   }
 
   const list = photos.data?.photos ?? [];
@@ -476,8 +550,10 @@ export function AlbumPage() {
         <ul className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
           {list.map((photo) => (
             <PhotoCard
-              key={`${photo.id}-${photo.version}-${photo.status}-${photo.priceCents}`}
+              key={`${photo.id}-${photo.version}-${edits[photo.id] ? "edit" : `${photo.status}-${photo.priceCents}`}`}
               photo={photo}
+              edit={edits[photo.id]}
+              onEdit={(change) => editPhoto(photo, change)}
               storeId={storeId}
               selected={selected.has(photo.id)}
               isCover={album?.coverPhotoId === photo.id}
@@ -498,6 +574,21 @@ export function AlbumPage() {
           ))}
         </ul>
       </div>
+
+      {pendingCount > 0 ? (
+        <div className="sticky bottom-4 z-20 mt-6 flex flex-wrap items-center gap-3 rounded-ui border border-accent/60 bg-overlay p-3 text-sm shadow-lg shadow-black/40">
+          <span className="text-fg">
+            {pendingCount} {pendingCount === 1 ? "foto con cambios" : "fotos con cambios"} sin
+            guardar
+          </span>
+          <Button loading={saving} onClick={() => void saveEdits()}>
+            Guardar cambios
+          </Button>
+          <Button variant="ghost" disabled={saving} onClick={() => setEdits({})}>
+            Descartar
+          </Button>
+        </div>
+      ) : null}
     </>
   );
 }
