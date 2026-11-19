@@ -143,6 +143,12 @@ export async function searchPaymentsByReference(sellerToken: string, externalRef
  * "id:<data.id>;request-id:<x-request-id>;ts:<ts>;" with the app's webhook
  * secret. Parts absent from the request are omitted from the manifest.
  */
+export function webhookSecrets(): string[] {
+  return env.MP_WEBHOOK_SECRET.split(",")
+    .map((secret) => secret.trim())
+    .filter(Boolean);
+}
+
 export function verifyWebhookSignature(input: {
   signature: string | undefined;
   requestId: string | undefined;
@@ -165,9 +171,11 @@ export function verifyWebhookSignature(input: {
   if (input.requestId) manifest += `request-id:${input.requestId};`;
   manifest += `ts:${ts};`;
 
-  const expected = Buffer.from(
-    createHmac("sha256", env.MP_WEBHOOK_SECRET).update(manifest).digest("hex"),
-  );
   const received = Buffer.from(v1);
-  return expected.length === received.length && timingSafeEqual(expected, received);
+  // Several secrets may be configured (comma-separated): Mercado Pago signs
+  // test-mode and production notifications with different keys.
+  return webhookSecrets().some((secret) => {
+    const expected = Buffer.from(createHmac("sha256", secret).update(manifest).digest("hex"));
+    return expected.length === received.length && timingSafeEqual(expected, received);
+  });
 }

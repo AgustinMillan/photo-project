@@ -337,6 +337,11 @@ describe("Mercado Pago marketplace", () => {
     });
 
     expect((await signedWebhook(owner.storeId, "9001", "wrong-secret")).statusCode).toBe(401);
+    const ipn = await app.inject({
+      method: "POST",
+      url: `/api/v1/payments/mercadopago/webhook?id=46212853561&store=${owner.storeId}&topic=merchant_order`,
+    });
+    expect(ipn.json()).toEqual({ result: "ignored_ipn" });
     const first = await signedWebhook(owner.storeId, "9001");
     expect(first.json()).toEqual({ result: "paid" });
     const again = await signedWebhook(owner.storeId, "9001");
@@ -344,6 +349,8 @@ describe("Mercado Pago marketplace", () => {
 
     const paymentsRows = await client`select method, provider_payment_id from payments`;
     expect(paymentsRows).toEqual([{ method: "mercadopago", provider_payment_id: "mp:9001" }]);
+    // Notifications signed with the test-mode secret are accepted too.
+    expect((await signedWebhook(owner.storeId, "9001", "test-mode-secret")).statusCode).toBe(200);
     const view = await app.inject({
       method: "GET",
       url: `/api/v1/public/orders/${order.orderId}?token=${order.accessToken}`,

@@ -362,10 +362,15 @@ export async function handleMercadoPagoWebhook(input: {
   storeId: string | undefined;
   dataId: string | undefined;
   type: string | undefined;
+  topic?: string | undefined;
   signature: string | undefined;
   requestId: string | undefined;
 }): Promise<{ status: number; result: string }> {
   if (!mercadoPagoConfigured()) return { status: 200, result: "disabled" };
+  // Legacy IPN deliveries (?topic=...&id=...) arrive unsigned alongside the
+  // signed webhook for the same event. Acknowledge them so Mercado Pago stops
+  // retrying; the signed webhook (or the return sync) settles the payment.
+  if (input.topic && !input.signature) return { status: 200, result: "ignored_ipn" };
   if (env.MP_WEBHOOK_SECRET && !verifyWebhookSignature(input)) {
     logger.warn(
       { storeId: input.storeId },

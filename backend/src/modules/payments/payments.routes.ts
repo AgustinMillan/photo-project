@@ -102,6 +102,7 @@ export const paymentsRoutes: FastifyPluginAsync = async (app) => {
         dataId:
           query["data.id"] ?? (body.data?.id !== undefined ? String(body.data.id) : undefined),
         type: query.type ?? body.type,
+        topic: query.topic,
         signature: header(request, "x-signature"),
         requestId: header(request, "x-request-id"),
       });
