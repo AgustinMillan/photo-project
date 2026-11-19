@@ -1,8 +1,10 @@
 import { type ChangeEvent, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { QrDownload } from "../components/QrDownload.tsx";
 import { Alert, Badge, Button, Card, Field, PageHeader, Spinner } from "../components/ui.tsx";
 import { catalogApi } from "../lib/endpoints.ts";
 import { errorMessage } from "../lib/errors.ts";
+import { storeUrl } from "../lib/format.ts";
 import { centsToInput, formatMoney, parsePesos } from "../lib/money.ts";
 import type { Photo } from "../lib/types.ts";
 import { useLoad } from "../lib/useLoad.ts";
@@ -374,6 +376,8 @@ export function AlbumPage() {
   }
 
   const list = photos.data?.photos ?? [];
+  const base = currentStore ? storeUrl(currentStore.primaryHostname, window.location) : null;
+  const galleryUrl = base ? `${base}/galeria/${albumId}` : null;
   const uploading = upload !== null && upload.done < upload.total;
 
   return (
@@ -383,7 +387,23 @@ export function AlbumPage() {
           ← Catálogo
         </Link>
       </p>
-      <PageHeader title={loose ? "Fotos sin galería" : (album?.title ?? "")} />
+      <PageHeader
+        title={loose ? "Fotos sin galería" : (album?.title ?? "")}
+        action={
+          !loose && album && galleryUrl ? (
+            <QrDownload
+              url={galleryUrl}
+              filename={`qr-galeria-${album.title}`}
+              label="QR de la galería"
+            />
+          ) : undefined
+        }
+      />
+      {!loose && album && galleryUrl && album.status !== "published" ? (
+        <p className="-mt-4 mb-4 text-xs text-fg-dim">
+          El QR funciona cuando la galería esté publicada.
+        </p>
+      ) : null}
 
       {message ? (
         <div className="mb-4">

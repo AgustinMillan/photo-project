@@ -28,6 +28,7 @@ import {
   type StyleContext,
   styleKey,
 } from "../catalog/media.js";
+import { storePromotions } from "../coupons/coupons.service.js";
 import { storePaymentOptions } from "../payments/payment-options.js";
 import type { StoreAccess } from "../stores/store-access.js";
 import { normalizeHostname } from "../stores/stores.constants.js";
@@ -510,6 +511,7 @@ export async function getPublicStorefront(rawHostname: string) {
     },
     albums: albumViews.filter((album) => album.photoCount > 0),
     photos: await publicPhotos(store.id, null, publication.content),
+    promotions: await storePromotions(store.id),
   };
 }
 

@@ -293,6 +293,8 @@ export type OrderSummary = {
   createdAt: string;
   paidAt: string | null;
   paidCents: number;
+  discountCents?: number;
+  couponCode?: string | null;
 };
 
 export type OrderDetail = {
@@ -350,6 +352,7 @@ export type PublicStorefront = {
     coverUrl: string | null;
   }>;
   photos: PublicPhoto[];
+  promotions?: Promotion[];
 };
 
 export type PublicAlbum = {
@@ -377,6 +380,8 @@ export type CustomerOrder = {
     status: OrderStatus;
     customerName: string;
     totalCents: number;
+    discountCents?: number;
+    couponCode?: string | null;
     currency: string;
     paymentInstructions: string;
     paymentMethod: CheckoutMethod;
@@ -501,4 +506,36 @@ export type OnboardingProgress = {
   firstSale: boolean;
   photoCount: number;
   mercadoPago: boolean;
+};
+
+export type CouponScope = "all" | "photos" | "albums";
+
+export type Coupon = {
+  id: string;
+  code: string;
+  percentOff: number;
+  appliesTo: CouponScope;
+  maxUses: number | null;
+  endsAt: string | null;
+  active: boolean;
+  showInStore: boolean;
+  uses: number;
+  status: "active" | "paused" | "expired" | "exhausted";
+  createdAt: string;
+};
+
+export type Promotion = {
+  code: string;
+  percentOff: number;
+  appliesTo: CouponScope;
+  endsAt: string | null;
+};
+
+export type CouponCheck = {
+  code: string;
+  percentOff: number;
+  appliesTo: CouponScope;
+  subtotalCents: number;
+  discountCents: number;
+  totalCents: number;
 };

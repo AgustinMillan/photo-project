@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { FirstSteps } from "../components/FirstSteps.tsx";
+import { QrDownload } from "../components/QrDownload.tsx";
 import { Alert, Badge, Card, PageHeader, Spinner, Stat } from "../components/ui.tsx";
 import { billingApi, storesApi } from "../lib/endpoints.ts";
 import { errorMessage } from "../lib/errors.ts";
@@ -34,6 +35,11 @@ export function OverviewPage() {
       <PageHeader
         title={currentStore.name}
         subtitle={account ? `Cuenta: ${account.name}` : undefined}
+        action={
+          url ? (
+            <QrDownload url={url} filename={`qr-${currentStore.slug}`} label="QR de tu tienda" />
+          ) : undefined
+        }
       />
 
       {trialDays !== null && trialDays <= 3 ? (

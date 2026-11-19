@@ -24,6 +24,7 @@ import { AppError } from "../../shared/errors/app-error.js";
 import { logger } from "../../shared/logger.js";
 import { assertStorePurchasesEnabled } from "../billing/billing.service.js";
 import { originalPath } from "../catalog/media.js";
+import { applyCoupon } from "../coupons/coupons.service.js";
 import { storePaymentOptions } from "../payments/payment-options.js";
 import { mediaUrl, requirePublishedStoreByHost } from "../storefront/storefront.service.js";
 import type { StoreAccess } from "../stores/store-access.js";
@@ -176,9 +177,32 @@ export async function createOrder(rawHostname: string, input: CreateOrderInput) 
       throw unavailable([...missing, ...emptyAlbums.map((album) => album.id)]);
     }
 
-    const totalCents =
+    const subtotalCents =
       sellableAlbums.reduce((sum, album) => sum + (album.priceCents ?? 0), 0) +
       sellablePhotos.reduce((sum, photo) => sum + (photo.priceCents ?? 0), 0);
+
+    // A coupon is locked for the rest of the transaction so two buyers cannot
+    // both take its last use.
+    const discount = input.couponCode
+      ? await applyCoupon(
+          tx,
+          store.id,
+          input.couponCode,
+          [
+            ...sellableAlbums.map((album) => ({
+              kind: "album" as const,
+              priceCents: album.priceCents ?? 0,
+            })),
+            ...sellablePhotos.map((photo) => ({
+              kind: "photo" as const,
+              priceCents: photo.priceCents ?? 0,
+            })),
+          ],
+          true,
+        )
+      : null;
+    const discountCents = discount?.discountCents ?? 0;
+    const totalCents = subtotalCents - discountCents;
 
     const [publication] = await tx
       .select({ content: storePublications.content })
@@ -214,6 +238,9 @@ export async function createOrder(rawHostname: string, input: CreateOrderInput) 
         paymentInstructions: input.paymentMethod === "transfer" ? paymentInstructions : "",
         checkoutMethod: input.paymentMethod,
         platformFeeCents,
+        couponId: discount?.coupon.id ?? null,
+        couponCode: discount?.coupon.code ?? null,
+        discountCents,
       })
       .returning();
     if (!created) throw new Error("Order insert returned no row.");
@@ -445,6 +472,8 @@ export async function getCustomerOrder(rawHostname: string, orderId: string, tok
       status: order.status,
       customerName: order.customerName,
       totalCents: order.totalCents,
+      discountCents: order.discountCents,
+      couponCode: order.couponCode,
       currency: order.currency,
       paymentInstructions: order.status === "pending_payment" ? order.paymentInstructions : "",
       paymentMethod: order.checkoutMethod,
@@ -528,6 +557,8 @@ export async function listStoreOrders(access: StoreAccess, status?: OrderStatus)
       customerEmail: orders.customerEmail,
       status: orders.status,
       totalCents: orders.totalCents,
+      discountCents: orders.discountCents,
+      couponCode: orders.couponCode,
       currency: orders.currency,
       checkoutMethod: orders.checkoutMethod,
       createdAt: orders.createdAt,
