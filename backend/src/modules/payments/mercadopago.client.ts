@@ -212,7 +212,7 @@ export async function updatePreapproval(id: string, body: Record<string, unknown
 }
 
 export async function searchPreapprovals(externalReference: string) {
-  const query = new URLSearchParams({ external_reference: externalReference, limit: "20" });
+  const query = new URLSearchParams({ external_reference: externalReference, limit: "10" });
   const result = await request<{ results?: MpPreapproval[] }>(
     "GET",
     `/preapproval/search?${query}`,
@@ -227,14 +227,26 @@ export async function getAuthorizedPayment(id: string) {
   });
 }
 
+/** Every charge of a preapproval (Mercado Pago pages this search by 10). */
 export async function searchAuthorizedPayments(preapprovalId: string) {
-  const query = new URLSearchParams({ preapproval_id: preapprovalId, limit: "50" });
-  const result = await request<{ results?: MpAuthorizedPayment[] }>(
-    "GET",
-    `/authorized_payments/search?${query}`,
-    { token: await platformAccessToken() },
-  );
-  return result.results ?? [];
+  const token = await platformAccessToken();
+  const all: MpAuthorizedPayment[] = [];
+  for (let offset = 0; offset < 500; offset += 10) {
+    const query = new URLSearchParams({
+      preapproval_id: preapprovalId,
+      limit: "10",
+      offset: String(offset),
+    });
+    const result = await request<{
+      results?: MpAuthorizedPayment[];
+      paging?: { total?: number };
+    }>("GET", `/authorized_payments/search?${query}`, { token });
+    const page = result.results ?? [];
+    all.push(...page);
+    const total = result.paging?.total ?? all.length;
+    if (page.length < 10 || all.length >= total) break;
+  }
+  return all;
 }
 
 /**
