@@ -54,7 +54,7 @@ SITE_NAME="$NEW_SITE" DOMAIN="$NEW_DOMAIN" ./deploy.sh
 docker compose up -d --force-recreate --wait api
 
 log "Turning $OLD_DOMAIN into a redirect"
-old_re="${OLD_DOMAIN//./\\.}"
+old_re="${OLD_DOMAIN//./\\\\.}"  # doubled: sed unescapes once
 sed -e "s|__OLD_DOMAIN_RE__|$old_re|g" -e "s|__OLD_DOMAIN__|$OLD_DOMAIN|g" -e "s|__NEW_DOMAIN__|$NEW_DOMAIN|g" \
   -e "s|__OLD_CERT__|$OLD_CERT|g" -e "s|__API_PORT__|$API_PORT|g" \
   "$DEPLOY_DIR/nginx.legacy.conf.template" > "$OLD_SITE_FILE"
