@@ -65,7 +65,7 @@ ok("login", s == 200, s)
 tok = r["accessToken"]
 call("POST", "/accounts", {"name": "QA Demo"}, tok)
 s, r = call("GET", "/stores", token=tok)
-stores = r["stores"]
+stores = [st for st in r["stores"] if st.get("slug") == SLUG]
 if not stores:
     s, r = call("POST", "/stores", {"name": "QA Demo", "slug": SLUG}, tok); ok("tienda", s == 201, s)
     store = r["store"]
