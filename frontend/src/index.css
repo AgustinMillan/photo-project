@@ -8,6 +8,7 @@
   --color-overlay: #1a243a;
   --color-accent: #38bdf8;
   --color-accent-soft: #7dd3fc;
+  --color-on-accent: #080b12;
   --color-line: #243352;
   --color-fg: #f0f6fc;
   --color-fg-muted: #cbd5e1;
@@ -37,4 +38,95 @@ body {
 :focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
+}
+
+/* --- Storefront templates ----------------------------------------------------
+ * Colors, fonts and radius come from CSS variables (lib/theme.ts). These rules add
+ * what variables can't: Clara's soft shadows and pill buttons, Neón's glow.
+ * Scoped to [data-template] (the store's <html>, or the editor preview box). */
+
+.theme-preview {
+  background: var(--color-void);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+}
+
+[data-template="claro"] .font-display {
+  font-weight: 500;
+  letter-spacing: 0.005em;
+}
+
+[data-template="claro"] .font-mono.uppercase {
+  font-weight: 600;
+  letter-spacing: 0.22em;
+}
+
+[data-template="claro"] .rounded-ui.border,
+[data-template="claro"] li.rounded-ui {
+  box-shadow: 0 14px 34px -22px color-mix(in srgb, var(--color-fg) 35%, transparent);
+}
+
+[data-template="claro"] a.rounded-ui,
+[data-template="claro"] button.rounded-ui {
+  border-radius: 999px;
+}
+
+[data-template="claro"] .hero-fallback,
+[data-template="neon"] .hero-fallback {
+  background-image: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-accent) 22%, var(--color-void)),
+    color-mix(in srgb, var(--color-accent-soft) 10%, var(--color-void)) 55%,
+    var(--color-void)
+  );
+}
+
+[data-template="claro"] .hero-cover {
+  opacity: 0.9;
+}
+
+[data-template="neon"] .font-display {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-shadow: 0 0 22px color-mix(in srgb, var(--color-accent) 55%, transparent);
+}
+
+[data-template="neon"] .text-accent {
+  text-shadow: 0 0 12px color-mix(in srgb, var(--color-accent) 75%, transparent);
+}
+
+[data-template="neon"] .bg-accent {
+  box-shadow:
+    0 0 18px color-mix(in srgb, var(--color-accent) 65%, transparent),
+    0 0 42px color-mix(in srgb, var(--color-accent) 25%, transparent);
+}
+
+[data-template="neon"] .border-accent {
+  box-shadow: 0 0 14px color-mix(in srgb, var(--color-accent) 45%, transparent);
+}
+
+[data-template="neon"] .rounded-ui.border {
+  transition: box-shadow 0.25s, border-color 0.25s;
+}
+
+[data-template="neon"] .rounded-ui.border:hover,
+[data-template="neon"] .group:hover .rounded-ui {
+  border-color: var(--color-accent-soft);
+  box-shadow: 0 0 22px color-mix(in srgb, var(--color-accent-soft) 45%, transparent);
+}
+
+html[data-template="neon"] body,
+.theme-preview[data-template="neon"] {
+  background-image:
+    radial-gradient(
+      60rem 36rem at 0% -10%,
+      color-mix(in srgb, var(--color-accent) 16%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      50rem 36rem at 100% 0%,
+      color-mix(in srgb, var(--color-accent-soft) 12%, transparent),
+      transparent 70%
+    );
+  background-attachment: fixed;
 }

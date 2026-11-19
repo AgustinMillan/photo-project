@@ -1,7 +1,12 @@
 import { z } from "zod";
-import { STOREFRONT_SECTION_KEYS } from "../../db/schema/index.js";
+import { STOREFRONT_SECTION_KEYS, STOREFRONT_TEMPLATES } from "../../db/schema/index.js";
 
 const text = (max: number) => z.string().trim().max(max);
+
+const hexColor = z
+  .string()
+  .regex(/^#[0-9a-fA-F]{6}$/, "Expected a #rrggbb color")
+  .transform((value) => value.toLowerCase());
 
 const protectionFlags = z.object({
   watermark: z.boolean(),
@@ -39,6 +44,14 @@ export const updateStorefrontSchema = z.object({
     .object({
       grid: protectionFlags,
       full: protectionFlags,
+    })
+    .optional(),
+  theme: z
+    .object({
+      template: z.enum(STOREFRONT_TEMPLATES),
+      primary: hexColor,
+      secondary: hexColor,
+      background: hexColor,
     })
     .optional(),
 });

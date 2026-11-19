@@ -1,10 +1,12 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { ProtectionEditor } from "../components/ProtectionEditor.tsx";
+import { ThemeEditor } from "../components/ThemeEditor.tsx";
 import { Alert, Badge, Button, Card, Field, PageHeader, Spinner } from "../components/ui.tsx";
 import { catalogApi, storefrontApi } from "../lib/endpoints.ts";
 import { errorMessage } from "../lib/errors.ts";
 import { formatDate, publicationLabel, storeUrl } from "../lib/format.ts";
 import { centsToInput, formatMoney, parsePesos } from "../lib/money.ts";
+import { DEFAULT_THEME } from "../lib/theme.ts";
 import type { SectionKey, StorefrontContent, StorefrontService } from "../lib/types.ts";
 import { useLoad } from "../lib/useLoad.ts";
 import { useWorkspace } from "../workspace/WorkspaceContext.tsx";
@@ -359,6 +361,17 @@ export function StorefrontEditorPage() {
 
       <form onSubmit={(event) => void save(event)} className="grid gap-4 lg:grid-cols-2">
         <fieldset disabled={!canEdit} className="contents">
+          <div className="lg:col-span-2">
+            <Card title="Diseño de tu tienda">
+              <ThemeEditor
+                value={draft.theme ?? DEFAULT_THEME}
+                displayName={draft.displayName}
+                photos={coverOptions.slice(0, 4).map((photo) => photo.thumbUrl)}
+                onChange={(theme) => update("theme", theme)}
+              />
+            </Card>
+          </div>
+
           <Card title="Identidad">
             <div className="space-y-4">
               <Field

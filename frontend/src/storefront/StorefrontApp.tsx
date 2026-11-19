@@ -1,4 +1,4 @@
-import { type FormEvent, type ReactNode, useEffect, useState } from "react";
+import { type FormEvent, type ReactNode, useEffect, useLayoutEffect, useState } from "react";
 import {
   BrowserRouter,
   Link,
@@ -14,12 +14,21 @@ import { serviceContactUrl } from "../lib/contact.ts";
 import { shopApi } from "../lib/endpoints.ts";
 import { errorMessage } from "../lib/errors.ts";
 import { formatMoney } from "../lib/money.ts";
+import {
+  applyCachedTheme,
+  applyThemeToDocument,
+  isTemplate,
+  TEMPLATE_ORDER,
+  TEMPLATES,
+  templateDefaults,
+} from "../lib/theme.ts";
 import type {
   CouponCheck,
   PhotoProtection,
   Promotion,
   PublicPhoto,
   PublicStorefront,
+  StorefrontTemplate,
 } from "../lib/types.ts";
 import { useLoad } from "../lib/useLoad.ts";
 import { trackVisit } from "../lib/visit.ts";
@@ -52,11 +61,38 @@ function platformSignupUrl(): string {
 
 function DemoBanner() {
   return (
-    <div className="bg-accent px-5 py-2 text-center text-sm text-void">
+    <div className="bg-accent px-5 py-2 text-center text-sm text-on-accent">
       Esta es una tienda de ejemplo hecha con Galeriza.{" "}
       <a href={platformSignupUrl()} className="font-medium underline underline-offset-2">
         Creá la tuya gratis →
       </a>
+    </div>
+  );
+}
+
+function TemplateSwitcher({
+  current,
+  onChange,
+}: {
+  current: StorefrontTemplate;
+  onChange: (template: StorefrontTemplate) => void;
+}) {
+  return (
+    <div className="fixed bottom-4 left-1/2 z-40 flex -translate-x-1/2 items-center gap-1 rounded-ui border border-line bg-surface/95 p-1 shadow-2xl backdrop-blur">
+      <span className="hidden px-2 font-mono text-[10px] uppercase tracking-wider text-fg-dim sm:inline">
+        Probá otro estilo
+      </span>
+      {TEMPLATE_ORDER.map((template) => (
+        <button
+          key={template}
+          type="button"
+          aria-pressed={current === template}
+          onClick={() => onChange(template)}
+          className={`rounded-ui px-3 py-1.5 text-sm ${current === template ? "bg-accent text-on-accent" : "text-fg-muted hover:text-fg"}`}
+        >
+          {TEMPLATES[template].name}
+        </button>
+      ))}
     </div>
   );
 }
@@ -75,7 +111,7 @@ function DemoCheckout() {
       </p>
       <a
         href={platformSignupUrl()}
-        className="mt-4 inline-block rounded-ui bg-accent px-5 py-2.5 text-sm font-medium text-void hover:bg-accent-soft"
+        className="mt-4 inline-block rounded-ui bg-accent px-5 py-2.5 text-sm font-medium text-on-accent hover:bg-accent-soft"
       >
         Crear mi tienda gratis
       </a>
@@ -215,7 +251,7 @@ function PhotoGrid({
                             albumId: photo.albumId,
                           })
                     }
-                    className={`shrink-0 rounded-ui px-2 py-1 font-mono text-xs ${inCart ? "bg-accent text-void" : "border border-line text-fg-muted hover:border-accent"}`}
+                    className={`shrink-0 rounded-ui px-2 py-1 font-mono text-xs ${inCart ? "bg-accent text-on-accent" : "border border-line text-fg-muted hover:border-accent"}`}
                   >
                     {inCart ? "En carrito" : formatMoney(photo.priceCents)}
                   </button>
@@ -270,10 +306,10 @@ function HomePage({ data }: { data: PublicStorefront }) {
           <img
             src={content.coverUrl}
             alt=""
-            className="absolute inset-0 size-full object-cover opacity-60"
+            className="hero-cover absolute inset-0 size-full object-cover opacity-60"
           />
         ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-overlay via-surface to-void" />
+          <div className="hero-fallback absolute inset-0 bg-gradient-to-br from-overlay via-surface to-void" />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-void via-void/40 to-transparent" />
         <div className="relative mx-auto w-full max-w-6xl px-5 pb-16">
@@ -321,7 +357,7 @@ function HomePage({ data }: { data: PublicStorefront }) {
                         href={contact}
                         target="_blank"
                         rel="noreferrer"
-                        className="rounded-ui border border-accent px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-accent hover:bg-accent hover:text-void"
+                        className="rounded-ui border border-accent px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-accent hover:bg-accent hover:text-on-accent"
                       >
                         Consultar
                       </a>
@@ -470,7 +506,7 @@ function AlbumView({ purchasesEnabled }: { purchasesEnabled: boolean }) {
                     albumId: null,
                   })
             }
-            className={`rounded-ui px-5 py-3 text-sm font-medium ${albumInCart ? "border border-accent text-accent" : "bg-accent text-void hover:bg-accent-soft"}`}
+            className={`rounded-ui px-5 py-3 text-sm font-medium ${albumInCart ? "border border-accent text-accent" : "bg-accent text-on-accent hover:bg-accent-soft"}`}
           >
             {albumInCart
               ? "Galería en el carrito ✓"
@@ -769,7 +805,7 @@ function CartPage({ data }: { data: PublicStorefront }) {
               <button
                 type="submit"
                 disabled={busy}
-                className="w-full rounded-ui bg-accent px-5 py-3 font-medium text-void hover:bg-accent-soft disabled:opacity-50"
+                className="w-full rounded-ui bg-accent px-5 py-3 font-medium text-on-accent hover:bg-accent-soft disabled:opacity-50"
               >
                 {busy
                   ? "Enviando…"
@@ -869,7 +905,7 @@ function OrderPage() {
             type="button"
             disabled={paying}
             onClick={() => void payWithMercadoPago()}
-            className="rounded-ui bg-accent px-5 py-3 font-medium text-void hover:bg-accent-soft disabled:opacity-50"
+            className="rounded-ui bg-accent px-5 py-3 font-medium text-on-accent hover:bg-accent-soft disabled:opacity-50"
           >
             {paying ? "Abriendo Mercado Pago…" : "Pagar con Mercado Pago"}
           </button>
@@ -965,6 +1001,20 @@ function StorefrontRoutes() {
     if (storefront.data) document.title = storefront.data.content.displayName;
   }, [storefront.data]);
 
+  // The demo store lets visitors try every template (?plantilla=claro links from the landing).
+  const [demoTemplate, setDemoTemplate] = useState<StorefrontTemplate | null>(() => {
+    const requested = new URLSearchParams(window.location.search).get("plantilla");
+    return isTemplate(requested) ? requested : null;
+  });
+
+  useLayoutEffect(() => {
+    const data = storefront.data;
+    if (!data) return;
+    if (data.store.isDemo && demoTemplate)
+      applyThemeToDocument(templateDefaults(demoTemplate), false);
+    else applyThemeToDocument(data.content.theme);
+  }, [storefront.data, demoTemplate]);
+
   if (storefront.loading) return <Loading />;
   if (storefront.error || !storefront.data) {
     // Order links must keep working even if the storefront is hidden later.
@@ -981,6 +1031,12 @@ function StorefrontRoutes() {
   const data = storefront.data;
   return (
     <Shell data={data}>
+      {data.store.isDemo ? (
+        <TemplateSwitcher
+          current={demoTemplate ?? data.content.theme?.template ?? "nocturne"}
+          onChange={setDemoTemplate}
+        />
+      ) : null}
       <Routes>
         <Route path="/" element={<HomePage data={data} />} />
         <Route
@@ -997,6 +1053,7 @@ function StorefrontRoutes() {
 
 export function StorefrontApp() {
   useEffect(() => trackVisit(), []);
+  useLayoutEffect(() => applyCachedTheme(), []);
   return (
     <BrowserRouter>
       <CartProvider>

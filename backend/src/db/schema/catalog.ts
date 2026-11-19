@@ -38,6 +38,31 @@ export type StorefrontService = {
 export type ProtectionFlags = { watermark: boolean; grayscale: boolean; reveal: boolean };
 export type PhotoProtection = { grid: ProtectionFlags; full: ProtectionFlags };
 
+export const STOREFRONT_TEMPLATES = ["nocturne", "claro", "neon"] as const;
+export type StorefrontTemplate = (typeof STOREFRONT_TEMPLATES)[number];
+
+/** Look of the public store: a template plus the three colors the photographer picks. */
+export type StorefrontTheme = {
+  template: StorefrontTemplate;
+  primary: string;
+  secondary: string;
+  background: string;
+};
+
+export const TEMPLATE_DEFAULT_COLORS: Record<
+  StorefrontTemplate,
+  Omit<StorefrontTheme, "template">
+> = {
+  nocturne: { primary: "#38bdf8", secondary: "#7dd3fc", background: "#080b12" },
+  claro: { primary: "#8e5e68", secondary: "#6f8268", background: "#faf7f4" },
+  neon: { primary: "#ff2bd6", secondary: "#22f3ff", background: "#07030f" },
+};
+
+export const DEFAULT_THEME: StorefrontTheme = {
+  template: "nocturne",
+  ...TEMPLATE_DEFAULT_COLORS.nocturne,
+};
+
 export type StorefrontContent = {
   displayName: string;
   tagline: string;
@@ -52,6 +77,7 @@ export type StorefrontContent = {
   sections: Array<{ key: StorefrontSectionKey; enabled: boolean }>;
   services: StorefrontService[];
   protection?: PhotoProtection;
+  theme?: StorefrontTheme;
 };
 
 export const storeProfiles = pgTable("store_profiles", {

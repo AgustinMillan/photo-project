@@ -262,7 +262,12 @@ def main():
         "watermarkText": "GALERIZA · EJEMPLO",
         "services": services,
         "sections": sections,
+        # The demo shows off the light template; visitors can switch styles live.
+        "theme": {"template": "claro", "primary": "#8e5e68", "secondary": "#6f8268", "background": "#faf7f4"},
     }
+    current = draft.get("draft", {})
+    if current.get("protection"):
+        content["protection"] = current["protection"]
     status, saved = call("PUT", f"/stores/{store_id}/storefront", content, token)
     print("vitrina", status, "" if status == 200 else saved)
     status, published = call("POST", f"/stores/{store_id}/storefront/publish", token=token)

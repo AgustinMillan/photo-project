@@ -218,6 +218,15 @@ export type StorefrontService = {
 export type ProtectionFlags = { watermark: boolean; grayscale: boolean; reveal: boolean };
 export type PhotoProtection = { grid: ProtectionFlags; full: ProtectionFlags };
 
+export type StorefrontTemplate = "nocturne" | "claro" | "neon";
+
+export type StorefrontTheme = {
+  template: StorefrontTemplate;
+  primary: string;
+  secondary: string;
+  background: string;
+};
+
 export type StorefrontContent = {
   displayName: string;
   tagline: string;
@@ -232,6 +241,7 @@ export type StorefrontContent = {
   sections: Array<{ key: SectionKey; enabled: boolean }>;
   services: StorefrontService[];
   protection?: PhotoProtection;
+  theme?: StorefrontTheme;
 };
 
 export type StorefrontAdmin = {
