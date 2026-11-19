@@ -457,6 +457,40 @@ describe("catalog and media", () => {
     );
   });
 
+  it("lets the store pick a template and its colors, with the classic look by default", async () => {
+    const owner = await createOwner("theme@example.com", "theme-studio");
+    await saveAndPublish(owner);
+    const host = "theme-studio.localhost";
+    let storefront = (await publicGet(host, "/api/v1/public/storefront")).json();
+    expect(storefront.content.theme).toEqual({
+      template: "nocturne",
+      primary: "#38bdf8",
+      secondary: "#7dd3fc",
+      background: "#080b12",
+    });
+
+    const bad = await app.inject({
+      method: "PUT",
+      url: `/api/v1/stores/${owner.storeId}/storefront`,
+      headers: auth(owner.token),
+      payload: profile({
+        theme: { template: "vaporwave", primary: "red", secondary: "#fff", background: "#000" },
+      }),
+    });
+    expect(bad.statusCode).toBe(400);
+
+    await saveAndPublish(owner, {
+      theme: { template: "neon", primary: "#FF00AA", secondary: "#00ffee", background: "#050010" },
+    });
+    storefront = (await publicGet(host, "/api/v1/public/storefront")).json();
+    expect(storefront.content.theme).toEqual({
+      template: "neon",
+      primary: "#ff00aa",
+      secondary: "#00ffee",
+      background: "#050010",
+    });
+  });
+
   it("protects previews as the store chose and never serves a weaker version", async () => {
     const owner = await createOwner("protect@example.com", "protect-studio");
     const photo = (

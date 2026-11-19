@@ -6,6 +6,7 @@ import { db } from "../../db/client.js";
 import {
   albums,
   auditLogs,
+  DEFAULT_THEME,
   mediaAssets,
   type PhotoProtection,
   photos,
@@ -150,6 +151,7 @@ export function defaultStorefrontContent(storeName: string): StorefrontContent {
     sections: STOREFRONT_SECTION_KEYS.map((key) => ({ key, enabled: true })),
     services: [],
     protection: DEFAULT_PROTECTION,
+    theme: DEFAULT_THEME,
   };
 }
 
@@ -172,6 +174,7 @@ export function normalizeStorefrontContent(content: StorefrontContent): Storefro
     sections,
     services: content.services ?? [],
     protection: content.protection ?? DEFAULT_PROTECTION,
+    theme: content.theme ?? DEFAULT_THEME,
   };
 }
 
