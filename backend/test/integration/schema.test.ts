@@ -40,6 +40,7 @@ describe("schema", () => {
       "photos",
       "plan_entitlements",
       "plans",
+      "store_coupons",
       "store_domains",
       "store_invitations",
       "store_memberships",

@@ -457,6 +457,220 @@ describe("catalog and media", () => {
     );
   });
 
+  it("protects previews as the store chose and never serves a weaker version", async () => {
+    const owner = await createOwner("protect@example.com", "protect-studio");
+    const photo = (
+      await upload(owner, await image("#cc3322", 2400, 1600), "?status=published")
+    ).json().photo;
+    await saveAndPublish(owner);
+    const host = "protect-studio.localhost";
+    const storefront = (await publicGet(host, "/api/v1/public/storefront")).json();
+    const listed = storefront.photos[0];
+    expect(storefront.content.protection).toMatchObject({
+      grid: { watermark: true, grayscale: false, reveal: false },
+    });
+    expect(listed.thumbUrl).toMatch(/\/s\/g-w-[0-9a-f]{8}\.webp$/);
+    expect(listed.previewUrl).toMatch(/\/s\/f-w-[0-9a-f]{8}\.webp$/);
+
+    const grid = await app.inject({ method: "GET", url: listed.thumbUrl });
+    expect(grid.statusCode).toBe(200);
+    expect((await sharp(grid.rawPayload).metadata()).width).toBe(640);
+    const full = await app.inject({ method: "GET", url: listed.previewUrl });
+    expect((await sharp(full.rawPayload).metadata()).width).toBe(1600);
+
+    // Asking for an unprotected version, or the clean thumbnail without signature, fails.
+    const assetId = listed.thumbUrl.split("/")[5];
+    const weaker = listed.thumbUrl.replace(/g-w-/, "g-n-");
+    expect((await app.inject({ method: "GET", url: weaker })).statusCode).toBe(404);
+    const unsigned = `/api/v1/public/media/${assetId}/thumb.webp`;
+    expect((await app.inject({ method: "GET", url: unsigned })).statusCode).toBe(404);
+    expect((await app.inject({ method: "GET", url: photo.thumbUrl })).statusCode).toBe(200);
+
+    // Black & white thumbnails, watermark + reveal in the full view.
+    await saveAndPublish(owner, {
+      protection: {
+        grid: { watermark: false, grayscale: true, reveal: false },
+        full: { watermark: true, grayscale: false, reveal: true },
+      },
+    });
+    const updated = (await publicGet(host, "/api/v1/public/storefront")).json();
+    expect(updated.content.protection.full.reveal).toBe(true);
+    const bw = updated.photos[0].thumbUrl as string;
+    expect(bw).toMatch(/\/s\/g-g-[0-9a-f]{8}\.webp$/);
+    const bwImage = await app.inject({ method: "GET", url: bw });
+    const { channels } = await sharp(bwImage.rawPayload).stats();
+    const [red, green, blue] = channels;
+    expect(Math.abs((red?.mean ?? 0) - (green?.mean ?? 0))).toBeLessThan(1);
+    expect(Math.abs((green?.mean ?? 0) - (blue?.mean ?? 0))).toBeLessThan(1);
+    // The previous settings are no longer served.
+    expect((await app.inject({ method: "GET", url: listed.thumbUrl })).statusCode).toBe(404);
+  });
+
+  it("applies store coupons with scope, use limit and expiry", async () => {
+    const shop = await sellableStore("cupones");
+    const host = "cupones.localhost";
+    const create = (payload: Record<string, unknown>) =>
+      app.inject({
+        method: "POST",
+        url: `/api/v1/stores/${shop.owner.storeId}/coupons`,
+        headers: auth(shop.owner.token),
+        payload,
+      });
+    const created = await create({
+      code: "verano2027",
+      percentOff: 10,
+      appliesTo: "photos",
+      maxUses: 1,
+      showInStore: true,
+    });
+    expect(created.statusCode).toBe(201);
+    expect(created.json().coupon).toMatchObject({ code: "VERANO2027", status: "active", uses: 0 });
+    expect((await create({ code: "VERANO2027", percentOff: 5 })).statusCode).toBe(409);
+    expect((await create({ code: "x", percentOff: 5 })).statusCode).toBe(400);
+    expect((await create({ code: "TODO100", percentOff: 100 })).statusCode).toBe(400);
+
+    // Advertised in the store.
+    const storefront = (await publicGet(host, "/api/v1/public/storefront")).json();
+    expect(storefront.promotions).toEqual([
+      expect.objectContaining({ code: "VERANO2027", percentOff: 10, appliesTo: "photos" }),
+    ]);
+
+    // 10% only on loose photos: album 5000 + photo 1500 -> discount 150.
+    const items = [
+      { type: "album", id: shop.album.id },
+      { type: "photo", id: shop.loose },
+    ];
+    const check = await app.inject({
+      method: "POST",
+      url: "/api/v1/public/coupons/check",
+      headers: { host },
+      payload: { code: " verano2027 ", items },
+    });
+    expect(check.json()).toMatchObject({
+      subtotalCents: 650000,
+      discountCents: 15000,
+      totalCents: 635000,
+    });
+
+    const order = await app.inject({
+      method: "POST",
+      url: "/api/v1/public/orders",
+      headers: { host, origin: `http://${host}` },
+      payload: {
+        customerName: "Cliente Uno",
+        customerEmail: "cliente@example.com",
+        items,
+        couponCode: "VERANO2027",
+      },
+    });
+    expect(order.statusCode).toBe(201);
+    expect(order.json().order).toMatchObject({ totalCents: 635000 });
+
+    // The single use is now reserved by the unpaid order.
+    const again = await app.inject({
+      method: "POST",
+      url: "/api/v1/public/coupons/check",
+      headers: { host },
+      payload: { code: "VERANO2027", items },
+    });
+    expect(again.json().error.code).toBe("COUPON_EXHAUSTED");
+    expect((await publicGet(host, "/api/v1/public/storefront")).json().promotions).toEqual([]);
+
+    // Wrong scope, unknown code and expired coupons are rejected.
+    await create({ code: "GALERIA20", percentOff: 20, appliesTo: "albums" });
+    const wrongScope = await app.inject({
+      method: "POST",
+      url: "/api/v1/public/coupons/check",
+      headers: { host },
+      payload: { code: "GALERIA20", items: [{ type: "photo", id: shop.loose }] },
+    });
+    expect(wrongScope.json().error.code).toBe("COUPON_NOT_APPLICABLE");
+    const unknown = await checkout(host, items).then(() =>
+      app.inject({
+        method: "POST",
+        url: "/api/v1/public/orders",
+        headers: { host, origin: `http://${host}` },
+        payload: {
+          customerName: "Cliente Dos",
+          customerEmail: "dos@example.com",
+          items,
+          couponCode: "NOEXISTE",
+        },
+      }),
+    );
+    expect(unknown.json().error.code).toBe("COUPON_NOT_FOUND");
+    const expired = (await create({ code: "VIEJO", percentOff: 15 })).json().coupon;
+    await client`update store_coupons set ends_at = now() - interval '1 minute' where id = ${expired.id}`;
+    const expiredCheck = await app.inject({
+      method: "POST",
+      url: "/api/v1/public/coupons/check",
+      headers: { host },
+      payload: { code: "VIEJO", items },
+    });
+    expect(expiredCheck.json().error.code).toBe("COUPON_EXPIRED");
+
+    // Panel list shows uses; a used coupon is paused instead of deleted.
+    const list = await app.inject({
+      method: "GET",
+      url: `/api/v1/stores/${shop.owner.storeId}/coupons`,
+      headers: auth(shop.owner.token),
+    });
+    const verano = list.json().coupons.find((c: { code: string }) => c.code === "VERANO2027");
+    expect(verano).toMatchObject({ uses: 1, status: "exhausted" });
+    const removed = await app.inject({
+      method: "DELETE",
+      url: `/api/v1/stores/${shop.owner.storeId}/coupons/${verano.id}`,
+      headers: auth(shop.owner.token),
+    });
+    expect(removed.json()).toEqual({ deleted: false, paused: true });
+  });
+
+  it("removes a photo from the store, keeps it for buyers and can restore it", async () => {
+    const owner = await createOwner("remove@example.com", "remove-studio");
+    const cover = (await upload(owner, await image("#334455"), "?status=published")).json().photo;
+    const other = (await upload(owner, await image("#556677"), "?status=published")).json().photo;
+    await saveAndPublish(owner, { coverPhotoId: cover.id });
+    const host = "remove-studio.localhost";
+    expect(
+      (await publicGet(host, "/api/v1/public/storefront")).json().content.coverUrl,
+    ).toBeTruthy();
+
+    const removed = await app.inject({
+      method: "POST",
+      url: `/api/v1/stores/${owner.storeId}/photos/bulk`,
+      headers: auth(owner.token),
+      payload: { photoIds: [cover.id], status: "archived" },
+    });
+    expect(removed.json()).toMatchObject({ updated: 1 });
+
+    const active = await app.inject({
+      method: "GET",
+      url: `/api/v1/stores/${owner.storeId}/photos?unassigned=1`,
+      headers: auth(owner.token),
+    });
+    expect(active.json().photos.map((p: { id: string }) => p.id)).toEqual([other.id]);
+    const archivedList = await app.inject({
+      method: "GET",
+      url: `/api/v1/stores/${owner.storeId}/photos?archived=1`,
+      headers: auth(owner.token),
+    });
+    expect(archivedList.json().photos.map((p: { id: string }) => p.id)).toEqual([cover.id]);
+
+    // The published storefront no longer shows a removed photo as its cover.
+    const storefront = (await publicGet(host, "/api/v1/public/storefront")).json();
+    expect(storefront.content.coverUrl).toBeNull();
+
+    const restored = await app.inject({
+      method: "PATCH",
+      url: `/api/v1/stores/${owner.storeId}/photos/${cover.id}`,
+      headers: auth(owner.token),
+      payload: { status: "draft" },
+    });
+    expect(restored.statusCode).toBe(200);
+    const rows = await client`select status from photos where id = ${cover.id}`;
+    expect(rows[0]?.status).toBe("draft");
+  });
+
   it("replaces a photo keeping previous versions, and a failed replace changes nothing", async () => {
     const owner = await createOwner("replace@example.com", "replace-studio");
     const photo = (await upload(owner, await image("#aaaaaa"))).json().photo;
@@ -506,7 +720,7 @@ describe("orders, manual payments and downloads", () => {
       headers: auth(owner.token),
     });
     expect(panelAlbums.json().albums[0]).toMatchObject({ photoCount: 2, publishedCount: 2 });
-    expect(panelAlbums.json().albums[0].coverUrl).toMatch(/thumb\.webp$/);
+    expect(panelAlbums.json().albums[0].coverUrl).toMatch(/thumb\.webp\?sig=/);
     const response = await checkout(owner.host, [
       { type: "album", id: album.id },
       { type: "photo", id: photoA },

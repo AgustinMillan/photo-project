@@ -3,6 +3,12 @@ import { STOREFRONT_SECTION_KEYS } from "../../db/schema/index.js";
 
 const text = (max: number) => z.string().trim().max(max);
 
+const protectionFlags = z.object({
+  watermark: z.boolean(),
+  grayscale: z.boolean(),
+  reveal: z.boolean(),
+});
+
 export const updateStorefrontSchema = z.object({
   displayName: text(120).min(1),
   tagline: text(200),
@@ -29,6 +35,12 @@ export const updateStorefrontSchema = z.object({
   sections: z
     .array(z.object({ key: z.enum(STOREFRONT_SECTION_KEYS), enabled: z.boolean() }))
     .length(STOREFRONT_SECTION_KEYS.length),
+  protection: z
+    .object({
+      grid: protectionFlags,
+      full: protectionFlags,
+    })
+    .optional(),
 });
 
 export type UpdateStorefrontInput = z.infer<typeof updateStorefrontSchema>;

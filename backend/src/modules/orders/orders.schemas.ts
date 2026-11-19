@@ -8,6 +8,7 @@ export const createOrderSchema = z.object({
     .min(1)
     .max(300),
   paymentMethod: z.enum(["transfer", "mercadopago"]).default("transfer"),
+  couponCode: z.string().trim().min(1).max(40).optional(),
 });
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 

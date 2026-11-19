@@ -34,6 +34,10 @@ export type StorefrontService = {
   coverPhotoId: string | null;
 };
 
+/** How previews are protected, separately for grid thumbnails and the full view. */
+export type ProtectionFlags = { watermark: boolean; grayscale: boolean; reveal: boolean };
+export type PhotoProtection = { grid: ProtectionFlags; full: ProtectionFlags };
+
 export type StorefrontContent = {
   displayName: string;
   tagline: string;
@@ -47,6 +51,7 @@ export type StorefrontContent = {
   watermarkText: string;
   sections: Array<{ key: StorefrontSectionKey; enabled: boolean }>;
   services: StorefrontService[];
+  protection?: PhotoProtection;
 };
 
 export const storeProfiles = pgTable("store_profiles", {
@@ -207,6 +212,37 @@ export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 export const CHECKOUT_METHODS = ["transfer", "mercadopago"] as const;
 export type CheckoutMethod = (typeof CHECKOUT_METHODS)[number];
 
+export const COUPON_SCOPES = ["all", "photos", "albums"] as const;
+export type CouponScope = (typeof COUPON_SCOPES)[number];
+
+/** Discount codes a photographer creates for their store (e.g. VERANO2027 = 10%). */
+export const storeCoupons = pgTable(
+  "store_coupons",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    storeId: uuid("store_id")
+      .notNull()
+      .references(() => stores.id, { onDelete: "restrict" }),
+    code: text("code").notNull(),
+    percentOff: integer("percent_off").notNull(),
+    appliesTo: text("applies_to").$type<CouponScope>().notNull().default("all"),
+    maxUses: integer("max_uses"),
+    startsAt: timestamp("starts_at", { withTimezone: true, mode: "date" }),
+    endsAt: timestamp("ends_at", { withTimezone: true, mode: "date" }),
+    active: boolean("active").notNull().default(true),
+    showInStore: boolean("show_in_store").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("store_coupons_store_code_uq").on(table.storeId, table.code),
+    check("store_coupons_percent_check", sql`${table.percentOff} between 1 and 90`),
+    check("store_coupons_scope_check", sql`${table.appliesTo} in ('all', 'photos', 'albums')`),
+    check("store_coupons_max_uses_check", sql`${table.maxUses} is null or ${table.maxUses} > 0`),
+    check("store_coupons_code_check", sql`${table.code} ~ '^[A-Z0-9_-]{3,30}$'`),
+  ],
+);
+
 export const orders = pgTable(
   "orders",
   {
@@ -225,6 +261,10 @@ export const orders = pgTable(
     checkoutMethod: text("checkout_method").$type<CheckoutMethod>().notNull().default("transfer"),
     // Platform commission frozen at checkout (0 while the fee is disabled).
     platformFeeCents: bigint("platform_fee_cents", { mode: "number" }).notNull().default(0),
+    // Discount from a store coupon; totalCents is already net of it.
+    couponId: uuid("coupon_id").references(() => storeCoupons.id, { onDelete: "set null" }),
+    couponCode: text("coupon_code"),
+    discountCents: bigint("discount_cents", { mode: "number" }).notNull().default(0),
     mpPreferenceId: text("mp_preference_id"),
     paidAt: timestamp("paid_at", { withTimezone: true, mode: "date" }),
     cancelledAt: timestamp("cancelled_at", { withTimezone: true, mode: "date" }),
@@ -235,6 +275,8 @@ export const orders = pgTable(
     uniqueIndex("orders_id_store_uq").on(table.id, table.storeId),
     uniqueIndex("orders_code_uq").on(table.code),
     index("orders_store_status_created_idx").on(table.storeId, table.status, table.createdAt),
+    index("orders_coupon_idx").on(table.couponId, table.status),
+    check("orders_discount_check", sql`${table.discountCents} >= 0`),
     check("orders_status_check", sql`${table.status} in ('pending_payment', 'paid', 'cancelled')`),
     check("orders_total_check", sql`${table.totalCents} > 0`),
     check(

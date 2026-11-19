@@ -215,6 +215,9 @@ export type StorefrontService = {
   coverPhotoId: string | null;
 };
 
+export type ProtectionFlags = { watermark: boolean; grayscale: boolean; reveal: boolean };
+export type PhotoProtection = { grid: ProtectionFlags; full: ProtectionFlags };
+
 export type StorefrontContent = {
   displayName: string;
   tagline: string;
@@ -228,6 +231,7 @@ export type StorefrontContent = {
   watermarkText: string;
   sections: Array<{ key: SectionKey; enabled: boolean }>;
   services: StorefrontService[];
+  protection?: PhotoProtection;
 };
 
 export type StorefrontAdmin = {
@@ -289,6 +293,8 @@ export type OrderSummary = {
   createdAt: string;
   paidAt: string | null;
   paidCents: number;
+  discountCents?: number;
+  couponCode?: string | null;
 };
 
 export type OrderDetail = {
@@ -346,12 +352,14 @@ export type PublicStorefront = {
     coverUrl: string | null;
   }>;
   photos: PublicPhoto[];
+  promotions?: Promotion[];
 };
 
 export type PublicAlbum = {
   album: { id: string; title: string; description: string; priceCents: number | null };
   photos: PublicPhoto[];
   purchasesEnabled: boolean;
+  protection?: PhotoProtection;
 };
 
 export type CreatedOrder = {
@@ -372,6 +380,8 @@ export type CustomerOrder = {
     status: OrderStatus;
     customerName: string;
     totalCents: number;
+    discountCents?: number;
+    couponCode?: string | null;
     currency: string;
     paymentInstructions: string;
     paymentMethod: CheckoutMethod;
@@ -496,4 +506,36 @@ export type OnboardingProgress = {
   firstSale: boolean;
   photoCount: number;
   mercadoPago: boolean;
+};
+
+export type CouponScope = "all" | "photos" | "albums";
+
+export type Coupon = {
+  id: string;
+  code: string;
+  percentOff: number;
+  appliesTo: CouponScope;
+  maxUses: number | null;
+  endsAt: string | null;
+  active: boolean;
+  showInStore: boolean;
+  uses: number;
+  status: "active" | "paused" | "expired" | "exhausted";
+  createdAt: string;
+};
+
+export type Promotion = {
+  code: string;
+  percentOff: number;
+  appliesTo: CouponScope;
+  endsAt: string | null;
+};
+
+export type CouponCheck = {
+  code: string;
+  percentOff: number;
+  appliesTo: CouponScope;
+  subtotalCents: number;
+  discountCents: number;
+  totalCents: number;
 };

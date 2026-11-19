@@ -138,6 +138,12 @@ function OrderDetailPanel({
             <span>{formatMoney(item.priceCents)}</span>
           </li>
         ))}
+        {order.discountCents ? (
+          <li className="flex justify-between px-3 py-2 text-sm text-ok">
+            <span>Cupón {order.couponCode}</span>
+            <span>−{formatMoney(order.discountCents)}</span>
+          </li>
+        ) : null}
         <li className="flex justify-between px-3 py-2 text-sm font-medium">
           <span>Total</span>
           <span>{formatMoney(order.totalCents)}</span>

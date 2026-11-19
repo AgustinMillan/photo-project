@@ -174,11 +174,22 @@ export function Badge({
   );
 }
 
-export function PageHeader({ title, subtitle }: { title: string; subtitle?: string }) {
+export function PageHeader({
+  title,
+  subtitle,
+  action,
+}: {
+  title: string;
+  subtitle?: string;
+  action?: ReactNode;
+}) {
   return (
-    <header className="mb-6">
-      <h1 className="font-display text-3xl text-fg">{title}</h1>
-      {subtitle ? <p className="mt-1 text-sm text-fg-dim">{subtitle}</p> : null}
+    <header className="mb-6 flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <h1 className="font-display text-3xl text-fg">{title}</h1>
+        {subtitle ? <p className="mt-1 text-sm text-fg-dim">{subtitle}</p> : null}
+      </div>
+      {action}
     </header>
   );
 }

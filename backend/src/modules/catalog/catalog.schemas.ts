@@ -38,6 +38,7 @@ export const photoIdParamsSchema = z.object({
 export const listPhotosQuerySchema = z.object({
   albumId: z.string().uuid().optional(),
   unassigned: z.enum(["1", "true"]).optional(),
+  archived: z.enum(["1", "true"]).optional(),
 });
 
 export const uploadPhotoQuerySchema = z.object({
@@ -67,6 +68,11 @@ export const bulkUpdatePhotosSchema = z
     message: "Nothing to update.",
   });
 export type BulkUpdatePhotosInput = z.infer<typeof bulkUpdatePhotosSchema>;
+
+export const styledMediaParamsSchema = z.object({
+  assetId: z.string().uuid(),
+  style: z.string().regex(/^[gf]-(w|g|wg|n)-[0-9a-f]{8}\.webp$/),
+});
 
 export const mediaParamsSchema = z.object({
   assetId: z.string().uuid(),

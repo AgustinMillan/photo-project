@@ -11,6 +11,9 @@ import type {
   AuthResponse,
   AuthUser,
   CatalogStatus,
+  Coupon,
+  CouponCheck,
+  CouponScope,
   CreatedOrder,
   CustomerOrder,
   Entitlement,
@@ -138,12 +141,17 @@ export const catalogApi = {
     api.delete<{ mode: string; affectedPhotos: number }>(
       `/stores/${storeId}/albums/${albumId}?mode=${mode}`,
     ),
-  photos: (storeId: string, filter: { albumId?: string; unassigned?: boolean }) => {
-    const query = filter.albumId
-      ? `?albumId=${filter.albumId}`
-      : filter.unassigned
-        ? "?unassigned=1"
-        : "";
+  photos: (
+    storeId: string,
+    filter: { albumId?: string; unassigned?: boolean; archived?: boolean },
+  ) => {
+    const query = filter.archived
+      ? "?archived=1"
+      : filter.albumId
+        ? `?albumId=${filter.albumId}`
+        : filter.unassigned
+          ? "?unassigned=1"
+          : "";
     return api.get<{ photos: Photo[] }>(`/stores/${storeId}/photos${query}`);
   },
   upload: (
@@ -212,7 +220,10 @@ export const shopApi = {
     customerEmail: string;
     paymentMethod: "transfer" | "mercadopago";
     items: Array<{ type: "photo" | "album"; id: string }>;
+    couponCode?: string;
   }) => api.post<{ order: CreatedOrder }>("/public/orders", body, { auth: false }),
+  checkCoupon: (body: { code: string; items: Array<{ type: "photo" | "album"; id: string }> }) =>
+    api.post<CouponCheck>("/public/coupons/check", body, { auth: false }),
   mercadoPagoCheckout: (orderId: string, token: string) =>
     api.post<{ url: string }>(
       `/public/orders/${orderId}/mercadopago/checkout?token=${encodeURIComponent(token)}`,
@@ -249,4 +260,26 @@ export const adminApi = {
   attribution: (days: number) =>
     api.get<{ days: number; rows: AttributionRow[] }>(`/admin/attribution?days=${days}`),
   action: (body: AdminAction) => api.post<{ ok: boolean }>("/admin/actions", body),
+};
+
+export const couponsApi = {
+  list: (storeId: string) => api.get<{ coupons: Coupon[] }>(`/stores/${storeId}/coupons`),
+  create: (
+    storeId: string,
+    body: {
+      code: string;
+      percentOff: number;
+      appliesTo: CouponScope;
+      maxUses: number | null;
+      endsAt: string | null;
+      showInStore: boolean;
+    },
+  ) => api.post<{ coupon: Coupon }>(`/stores/${storeId}/coupons`, body),
+  update: (
+    storeId: string,
+    couponId: string,
+    body: Partial<Pick<Coupon, "active" | "showInStore" | "maxUses" | "endsAt" | "percentOff">>,
+  ) => api.patch<{ coupon: Coupon }>(`/stores/${storeId}/coupons/${couponId}`, body),
+  remove: (storeId: string, couponId: string) =>
+    api.delete<{ deleted: boolean; paused: boolean }>(`/stores/${storeId}/coupons/${couponId}`),
 };

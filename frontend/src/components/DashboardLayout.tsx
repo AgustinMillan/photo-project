@@ -12,6 +12,7 @@ const NAV = [
   { to: "/app/storefront", label: "Vitrina", end: false },
   { to: "/app/catalog", label: "Catálogo", end: false },
   { to: "/app/orders", label: "Pedidos", end: false },
+  { to: "/app/coupons", label: "Cupones", end: false },
   { to: "/app/stats", label: "Estadísticas", end: false },
   { to: "/app/payments", label: "Cobros", end: false },
   { to: "/app/team", label: "Equipo", end: false },

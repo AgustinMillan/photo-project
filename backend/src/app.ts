@@ -12,6 +12,7 @@ import { analyticsRoutes } from "./modules/analytics/analytics.routes.js";
 import { authRoutes } from "./modules/auth/auth.routes.js";
 import { billingRoutes } from "./modules/billing/billing.routes.js";
 import { catalogRoutes } from "./modules/catalog/catalog.routes.js";
+import { couponsRoutes } from "./modules/coupons/coupons.routes.js";
 import { healthRoutes } from "./modules/health/health.routes.js";
 import { ordersRoutes } from "./modules/orders/orders.routes.js";
 import { paymentsRoutes } from "./modules/payments/payments.routes.js";
@@ -67,6 +68,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(paymentsRoutes, { prefix: "/api/v1" });
   await app.register(adminRoutes, { prefix: "/api/v1" });
   await app.register(analyticsRoutes, { prefix: "/api/v1" });
+  await app.register(couponsRoutes, { prefix: "/api/v1" });
 
   return app;
 }

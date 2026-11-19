@@ -7,6 +7,7 @@ import { AcceptInvitationPage } from "./pages/AcceptInvitationPage.tsx";
 import { AdminPage } from "./pages/AdminPage.tsx";
 import { AlbumPage } from "./pages/AlbumPage.tsx";
 import { CatalogPage } from "./pages/CatalogPage.tsx";
+import { CouponsPage } from "./pages/CouponsPage.tsx";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage.tsx";
 import { LandingPage } from "./pages/LandingPage.tsx";
 import { LoginPage } from "./pages/LoginPage.tsx";
@@ -15,6 +16,7 @@ import { OrdersPage } from "./pages/OrdersPage.tsx";
 import { OverviewPage } from "./pages/OverviewPage.tsx";
 import { PaymentsPage } from "./pages/PaymentsPage.tsx";
 import { RegisterPage } from "./pages/RegisterPage.tsx";
+import { RemovedPhotosPage } from "./pages/RemovedPhotosPage.tsx";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage.tsx";
 import { SettingsPage } from "./pages/SettingsPage.tsx";
 import { StatsPage } from "./pages/StatsPage.tsx";
@@ -62,8 +64,10 @@ export function App() {
                   <Route index element={<OverviewPage />} />
                   <Route path="storefront" element={<StorefrontEditorPage />} />
                   <Route path="catalog" element={<CatalogPage />} />
+                  <Route path="catalog/quitadas" element={<RemovedPhotosPage />} />
                   <Route path="catalog/:albumId" element={<AlbumPage />} />
                   <Route path="orders" element={<OrdersPage />} />
+                  <Route path="coupons" element={<CouponsPage />} />
                   <Route path="payments" element={<PaymentsPage />} />
                   <Route path="team" element={<TeamPage />} />
                   <Route path="stats" element={<StatsPage />} />

@@ -184,7 +184,7 @@ export async function removeAlbum(
 
 export async function listPhotos(
   access: StoreAccess,
-  filter: { albumId?: string; unassigned?: boolean },
+  filter: { albumId?: string; unassigned?: boolean; archived?: boolean },
 ) {
   const rows = await db
     .select({
@@ -210,7 +210,7 @@ export async function listPhotos(
     .where(
       and(
         eq(photos.storeId, access.store.id),
-        ne(photos.status, "archived"),
+        filter.archived ? eq(photos.status, "archived") : ne(photos.status, "archived"),
         filter.albumId ? eq(photos.albumId, filter.albumId) : undefined,
         filter.unassigned ? isNull(photos.albumId) : undefined,
       ),

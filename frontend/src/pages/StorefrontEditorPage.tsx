@@ -1,4 +1,5 @@
 import { type FormEvent, useEffect, useState } from "react";
+import { ProtectionEditor } from "../components/ProtectionEditor.tsx";
 import { Alert, Badge, Button, Card, Field, PageHeader, Spinner } from "../components/ui.tsx";
 import { catalogApi, storefrontApi } from "../lib/endpoints.ts";
 import { errorMessage } from "../lib/errors.ts";
@@ -451,14 +452,20 @@ export function StorefrontEditorPage() {
                 hint="Se muestran al cliente al confirmar el pedido y van en el email. Ej.: alias, CBU, titular y a dónde mandar el comprobante."
                 onChange={(value) => update("paymentInstructions", value)}
               />
-              <Field
-                label="Marca de agua"
-                value={draft.watermarkText}
-                hint="Texto sobre las vistas previas públicas. Se aplica a las fotos que subas desde ahora."
-                onChange={(e) => update("watermarkText", e.target.value)}
-              />
             </div>
           </Card>
+
+          <div className="lg:col-span-2">
+            <Card title="Protección de tus fotos">
+              <ProtectionEditor
+                value={draft.protection}
+                watermarkText={draft.watermarkText}
+                sampleUrl={coverOptions[0]?.thumbUrl ?? null}
+                onChange={(protection) => update("protection", protection)}
+                onWatermarkTextChange={(value) => update("watermarkText", value)}
+              />
+            </Card>
+          </div>
 
           <div className="lg:col-span-2">
             <Card title="Servicios">

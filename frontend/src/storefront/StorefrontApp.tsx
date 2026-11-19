@@ -14,10 +14,17 @@ import { serviceContactUrl } from "../lib/contact.ts";
 import { shopApi } from "../lib/endpoints.ts";
 import { errorMessage } from "../lib/errors.ts";
 import { formatMoney } from "../lib/money.ts";
-import type { PublicPhoto, PublicStorefront } from "../lib/types.ts";
+import type {
+  CouponCheck,
+  PhotoProtection,
+  Promotion,
+  PublicPhoto,
+  PublicStorefront,
+} from "../lib/types.ts";
 import { useLoad } from "../lib/useLoad.ts";
 import { trackVisit } from "../lib/visit.ts";
 import { CartProvider, useCart } from "./cart.tsx";
+import { ProtectedImage } from "./ProtectedImage.tsx";
 
 function Loading() {
   return (
@@ -76,11 +83,55 @@ function DemoCheckout() {
   );
 }
 
+function scopeText(appliesTo: Promotion["appliesTo"]): string {
+  if (appliesTo === "photos") return " en fotos sueltas";
+  if (appliesTo === "albums") return " en galerías completas";
+  return "";
+}
+
+function PromotionBanner({ promotions }: { promotions: Promotion[] }) {
+  const [saved, setSaved] = useState(() => readSavedCoupon());
+  const promo = promotions[0];
+  if (!promo) return null;
+  const until = promo.endsAt
+    ? ` hasta el ${new Date(promo.endsAt).toLocaleDateString("es-AR", { day: "numeric", month: "long" })}`
+    : "";
+  return (
+    <div className="border-b border-accent/30 bg-accent/10 px-5 py-2 text-center text-sm text-fg">
+      <span className="text-accent">−{promo.percentOff}%</span>
+      {scopeText(promo.appliesTo)}
+      {until} con el código <strong className="font-mono">{promo.code}</strong>{" "}
+      {saved === promo.code ? (
+        <span className="ml-2 text-xs text-ok">✓ se aplica en el carrito</span>
+      ) : (
+        <button
+          type="button"
+          className="ml-2 rounded-ui border border-accent/50 px-2 py-0.5 text-xs hover:bg-accent/20"
+          onClick={() => {
+            saveCoupon(promo.code);
+            setSaved(promo.code);
+          }}
+        >
+          Usar
+        </button>
+      )}
+    </div>
+  );
+}
+
 function Shell({ data, children }: { data: PublicStorefront; children: ReactNode }) {
   const cart = useCart();
+  // A shared link like tienda/?cupon=VERANO2027 pre-loads the code for the cart.
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get("cupon");
+    if (code) saveCoupon(code.trim().toUpperCase());
+  }, []);
   return (
     <div className="min-h-screen">
       {data.store.isDemo ? <DemoBanner /> : null}
+      {!data.store.isDemo && data.store.purchasesEnabled && data.promotions?.length ? (
+        <PromotionBanner promotions={data.promotions} />
+      ) : null}
       <header className="sticky top-0 z-20 border-b border-line/60 bg-void/85 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-4">
           <Link to="/" className="font-display text-xl text-fg">
@@ -109,10 +160,12 @@ function PhotoGrid({
   photos,
   purchasesEnabled,
   coveredByAlbum,
+  protection,
 }: {
   photos: PublicPhoto[];
   purchasesEnabled: boolean;
   coveredByAlbum?: boolean;
+  protection?: PhotoProtection;
 }) {
   const cart = useCart();
   const [open, setOpen] = useState<PublicPhoto | null>(null);
@@ -135,7 +188,15 @@ function PhotoGrid({
               className="mb-3 break-inside-avoid overflow-hidden rounded-ui border border-line/60 bg-surface"
             >
               <button type="button" className="block w-full" onClick={() => setOpen(photo)}>
-                <img src={photo.thumbUrl} alt={photo.title} loading="lazy" className="w-full" />
+                <ProtectedImage
+                  src={photo.thumbUrl}
+                  alt={photo.title}
+                  loading="lazy"
+                  reveal={Boolean(protection?.grid.reveal)}
+                  radius={60}
+                  className="block w-full"
+                  imgClassName="block w-full"
+                />
               </button>
               <div className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
                 <span className="truncate text-fg-muted">{photo.title}</span>
@@ -173,11 +234,18 @@ function PhotoGrid({
           onClick={() => setOpen(null)}
           onKeyDown={() => undefined}
         >
-          <img
-            src={open.previewUrl}
-            alt={open.title}
-            className="max-h-[90vh] max-w-full object-contain"
-          />
+          {/* biome-ignore lint/a11y/noStaticElementInteractions: keeps clicks on the photo from closing the dialog */}
+          <div onClick={(event) => event.stopPropagation()} onKeyDown={() => undefined}>
+            <ProtectedImage
+              src={open.previewUrl}
+              alt={open.title}
+              reveal={Boolean(protection?.full.reveal)}
+              radius={110}
+              touchReveal
+              className="inline-block"
+              imgClassName="block max-h-[90vh] max-w-[calc(100vw-2rem)] object-contain"
+            />
+          </div>
           <button
             type="button"
             className="absolute top-4 right-4 font-mono text-sm text-fg-muted"
@@ -300,7 +368,11 @@ function HomePage({ data }: { data: PublicStorefront }) {
           {data.photos.length ? (
             <div className="mt-12">
               <h3 className="mb-4 font-display text-xl">Fotos</h3>
-              <PhotoGrid photos={data.photos} purchasesEnabled={data.store.purchasesEnabled} />
+              <PhotoGrid
+                photos={data.photos}
+                purchasesEnabled={data.store.purchasesEnabled}
+                protection={data.content.protection}
+              />
             </div>
           ) : null}
         </section>
@@ -411,9 +483,33 @@ function AlbumView({ purchasesEnabled }: { purchasesEnabled: boolean }) {
           Las compras no están disponibles en este momento.
         </p>
       ) : null}
-      <PhotoGrid photos={photos} purchasesEnabled={canBuy} coveredByAlbum={albumInCart} />
+      <PhotoGrid
+        photos={photos}
+        purchasesEnabled={canBuy}
+        coveredByAlbum={albumInCart}
+        protection={album.data.protection}
+      />
     </main>
   );
+}
+
+const COUPON_KEY = "galeriza-coupon";
+
+function readSavedCoupon(): string {
+  try {
+    return sessionStorage.getItem(COUPON_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function saveCoupon(code: string) {
+  try {
+    if (code) sessionStorage.setItem(COUPON_KEY, code);
+    else sessionStorage.removeItem(COUPON_KEY);
+  } catch {
+    // Storage unavailable: the buyer can type the code in the cart.
+  }
 }
 
 function CartPage({ data }: { data: PublicStorefront }) {
@@ -428,18 +524,59 @@ function CartPage({ data }: { data: PublicStorefront }) {
     options.mercadopago ? "mercadopago" : "transfer",
   );
 
+  const payableItems = cart.items
+    .filter((item) => !cart.isCovered(item))
+    .map((item) => ({ type: item.type, id: item.id }));
+  const itemsKey = payableItems.map((item) => item.id).join(",");
+  const [couponInput, setCouponInput] = useState(() => readSavedCoupon());
+  const [coupon, setCoupon] = useState<CouponCheck | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
+  const totalCents = coupon ? coupon.totalCents : cart.totalCents;
+
+  async function applyCoupon(code: string) {
+    const clean = code.trim().toUpperCase();
+    if (!clean || payableItems.length === 0) return;
+    setChecking(true);
+    setCouponError(null);
+    try {
+      setCoupon(await shopApi.checkCoupon({ code: clean, items: payableItems }));
+      saveCoupon(clean);
+    } catch (caught) {
+      setCoupon(null);
+      setCouponError(errorMessage(caught));
+    } finally {
+      setChecking(false);
+    }
+  }
+
+  // Re-price the coupon whenever the cart changes (also applies a code saved from the banner).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: itemsKey captures the cart contents.
+  useEffect(() => {
+    const code = coupon?.code ?? readSavedCoupon();
+    if (code) void applyCoupon(code);
+  }, [itemsKey]);
+
+  function dropCoupon() {
+    setCoupon(null);
+    setCouponInput("");
+    setCouponError(null);
+    saveCoupon("");
+  }
+
   async function checkout(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
     setError(null);
     try {
-      const payable = cart.items.filter((item) => !cart.isCovered(item));
       const { order } = await shopApi.checkout({
         customerName: name,
         customerEmail: email,
         paymentMethod: method,
-        items: payable.map((item) => ({ type: item.type, id: item.id })),
+        items: payableItems,
+        ...(coupon ? { couponCode: coupon.code } : {}),
       });
+      saveCoupon("");
       cart.clear();
       const orderPath = `/pedido/${order.orderId}?token=${encodeURIComponent(order.accessToken)}&nuevo=1`;
       if (order.paymentMethod === "mercadopago") {
@@ -459,6 +596,10 @@ function CartPage({ data }: { data: PublicStorefront }) {
         setError(
           "Algunas fotos ya no están disponibles y las quitamos del carrito. Revisá el total y volvé a confirmar.",
         );
+      } else if (caught instanceof ApiError && caught.code.startsWith("COUPON_")) {
+        setCoupon(null);
+        setCouponError(errorMessage(caught));
+        setError("El cupón ya no se puede usar. Revisá el total y volvé a confirmar.");
       } else if (caught instanceof ApiError && caught.code === "STORE_PURCHASES_DISABLED") {
         setError("Este estudio no está aceptando compras en este momento.");
       } else {
@@ -509,11 +650,62 @@ function CartPage({ data }: { data: PublicStorefront }) {
                 </button>
               </li>
             ))}
+            {coupon ? (
+              <>
+                <li className="flex justify-between p-3 text-sm text-fg-muted">
+                  <span>Subtotal</span>
+                  <span>{formatMoney(coupon.subtotalCents)}</span>
+                </li>
+                <li className="flex items-center justify-between gap-3 p-3 text-sm text-ok">
+                  <span>
+                    Cupón {coupon.code} (−{coupon.percentOff}%{scopeText(coupon.appliesTo)}){" "}
+                    <button
+                      type="button"
+                      className="ml-2 text-xs text-fg-dim hover:text-danger"
+                      onClick={dropCoupon}
+                    >
+                      Quitar
+                    </button>
+                  </span>
+                  <span>−{formatMoney(coupon.discountCents)}</span>
+                </li>
+              </>
+            ) : null}
             <li className="flex justify-between p-3 font-medium">
               <span>Total</span>
-              <span>{formatMoney(cart.totalCents)}</span>
+              <span>{formatMoney(totalCents)}</span>
             </li>
           </ul>
+
+          {!data.store.isDemo && data.store.purchasesEnabled && !coupon ? (
+            <form
+              className="mt-4 flex gap-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void applyCoupon(couponInput);
+              }}
+            >
+              <input
+                aria-label="Código de descuento"
+                placeholder="¿Tenés un cupón?"
+                value={couponInput}
+                onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                className="flex-1 border-0 border-b border-line bg-raised px-3 py-2 font-mono text-sm uppercase focus:border-accent focus:outline-none"
+              />
+              <button
+                type="submit"
+                disabled={checking || !couponInput.trim()}
+                className="rounded-ui border border-line px-4 py-2 text-sm text-fg-muted hover:border-accent hover:text-fg disabled:opacity-50"
+              >
+                {checking ? "Revisando…" : "Aplicar"}
+              </button>
+            </form>
+          ) : null}
+          {couponError && !coupon ? (
+            <p role="alert" className="mt-2 text-sm text-danger">
+              {couponError}
+            </p>
+          ) : null}
 
           {data.store.isDemo ? (
             <DemoCheckout />
@@ -582,8 +774,8 @@ function CartPage({ data }: { data: PublicStorefront }) {
                 {busy
                   ? "Enviando…"
                   : method === "mercadopago"
-                    ? `Pagar con Mercado Pago · ${formatMoney(cart.totalCents)}`
-                    : `Confirmar pedido · ${formatMoney(cart.totalCents)}`}
+                    ? `Pagar con Mercado Pago · ${formatMoney(totalCents)}`
+                    : `Confirmar pedido · ${formatMoney(totalCents)}`}
               </button>
             </form>
           ) : (
@@ -748,6 +940,12 @@ function OrderPage() {
             <span>{formatMoney(item.priceCents, info.currency)}</span>
           </li>
         ))}
+        {info.discountCents ? (
+          <li className="flex justify-between p-3 text-ok">
+            <span>Cupón {info.couponCode}</span>
+            <span>−{formatMoney(info.discountCents, info.currency)}</span>
+          </li>
+        ) : null}
         <li className="flex justify-between p-3 font-medium">
           <span>Total</span>
           <span>{formatMoney(info.totalCents, info.currency)}</span>
