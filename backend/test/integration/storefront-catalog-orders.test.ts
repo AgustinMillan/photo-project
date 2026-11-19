@@ -509,6 +509,8 @@ describe("catalog and media", () => {
     const grid = await app.inject({ method: "GET", url: listed.thumbUrl });
     expect(grid.statusCode).toBe(200);
     expect((await sharp(grid.rawPayload).metadata()).width).toBe(640);
+    // The landing (same site, another subdomain) may show it; other sites may not.
+    expect(grid.headers["cross-origin-resource-policy"]).toBe("same-site");
     const full = await app.inject({ method: "GET", url: listed.previewUrl });
     expect((await sharp(full.rawPayload).metadata()).width).toBe(1600);
 

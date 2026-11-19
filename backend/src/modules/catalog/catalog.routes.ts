@@ -172,6 +172,8 @@ export const catalogRoutes: FastifyPluginAsync = async (app) => {
         .header("content-type", "image/webp")
         .header("content-length", info.size)
         .header("cache-control", "public, max-age=31536000, immutable")
+        // Our own sites (landing + every store) may show it; other sites still cannot.
+        .header("cross-origin-resource-policy", "same-site")
         .send(createReadStream(file));
     },
   );
@@ -193,6 +195,8 @@ export const catalogRoutes: FastifyPluginAsync = async (app) => {
         .header("content-type", "image/webp")
         .header("content-length", info.size)
         .header("cache-control", "public, max-age=31536000, immutable")
+        // Our own sites (landing + every store) may show it; other sites still cannot.
+        .header("cross-origin-resource-policy", "same-site")
         .send(createReadStream(file));
     },
   );
