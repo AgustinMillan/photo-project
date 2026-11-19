@@ -33,12 +33,16 @@ export function mercadoPagoConfigured(): boolean {
   return Boolean(env.MP_CLIENT_ID && env.MP_CLIENT_SECRET);
 }
 
+function mercadoPagoBaseUrl(): string {
+  return env.MP_PUBLIC_BASE_URL ?? env.APP_URL;
+}
+
 export function mercadoPagoRedirectUri(): string {
-  return new URL("/api/v1/payments/mercadopago/callback", env.APP_URL).toString();
+  return new URL("/api/v1/payments/mercadopago/callback", mercadoPagoBaseUrl()).toString();
 }
 
 export function mercadoPagoWebhookUrl(storeId: string): string {
-  const url = new URL("/api/v1/payments/mercadopago/webhook", env.APP_URL);
+  const url = new URL("/api/v1/payments/mercadopago/webhook", mercadoPagoBaseUrl());
   url.searchParams.set("store", storeId);
   return url.toString();
 }

@@ -16,7 +16,7 @@ export async function sendVerificationEmail(to: string, token: string): Promise<
     to,
     subject: "Verificá tu email",
     text: [
-      "Gracias por registrarte en Photo Platform.",
+      "Gracias por registrarte en Galeriza.",
       "",
       "Para verificar tu email, abrí este enlace:",
       link,
@@ -24,7 +24,7 @@ export async function sendVerificationEmail(to: string, token: string): Promise<
       "Si no creaste una cuenta, ignorá este mensaje.",
     ].join("\n"),
     html: [
-      "<p>Gracias por registrarte en Photo Platform.</p>",
+      "<p>Gracias por registrarte en Galeriza.</p>",
       `<p><a href="${link}">Verificar mi email</a></p>`,
       "<p>Si no creaste una cuenta, ignorá este mensaje.</p>",
     ].join(""),

@@ -24,7 +24,7 @@ export function DashboardLayout() {
   return (
     <div className="min-h-screen md:grid md:grid-cols-[16rem_1fr]">
       <aside className="border-b border-line bg-surface p-5 md:border-r md:border-b-0">
-        <p className="font-mono text-xs uppercase tracking-[0.3em] text-accent">Photo Platform</p>
+        <p className="font-mono text-xs uppercase tracking-[0.3em] text-accent">Galeriza</p>
 
         <div className="mt-6">
           <label

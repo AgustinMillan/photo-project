@@ -115,14 +115,14 @@ export function LandingPage() {
   const { user } = useAuth();
 
   useEffect(() => {
-    document.title = "Photo Platform · Tu tienda de fotos con cobro y entrega automática";
+    document.title = "Galeriza · Tu tienda de fotos con cobro y entrega automática";
   }, []);
 
   return (
     <div className="min-h-screen bg-void text-fg">
       <header className="sticky top-0 z-20 border-b border-line/60 bg-void/85 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-4">
-          <span className="font-display text-xl">Photo Platform</span>
+          <span className="font-display text-xl">Galeriza</span>
           <nav className="flex items-center gap-3 text-sm">
             <a href="#precio" className="hidden text-fg-muted hover:text-fg sm:inline">
               Precio
@@ -280,7 +280,7 @@ export function LandingPage() {
       </main>
 
       <footer className="border-t border-line/60 px-5 py-8 text-center text-xs text-fg-dim">
-        © {new Date().getFullYear()} Photo Platform
+        © {new Date().getFullYear()} Galeriza
         {SUPPORT_EMAIL ? (
           <>
             {" · "}
