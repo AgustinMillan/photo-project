@@ -328,6 +328,7 @@ export type PublicStorefront = {
     name: string;
     slug: string;
     purchasesEnabled: boolean;
+    isDemo?: boolean;
     currency: string;
     payments: { mercadopago: boolean; transfer: boolean };
   };

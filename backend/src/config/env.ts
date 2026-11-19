@@ -18,6 +18,16 @@ const envSchema = z.object({
   MP_PLATFORM_ACCESS_TOKEN: z.string().optional(),
   // Days of access kept after a missed monthly charge before the account
   // expires (Mercado Pago retries failed charges for a few days).
+  // Showcase stores (comma-separated slugs): fully browsable, no real orders.
+  DEMO_STORE_SLUGS: z
+    .string()
+    .default("")
+    .transform((value) =>
+      value
+        .split(",")
+        .map((slug) => slug.trim().toLowerCase())
+        .filter(Boolean),
+    ),
   BILLING_GRACE_DAYS: z.coerce.number().int().min(0).default(5),
   JWT_ACCESS_SECRET: z.string().min(32, "JWT_ACCESS_SECRET must have at least 32 characters"),
   JWT_ISSUER: z.string().min(1).default("photo-platform"),

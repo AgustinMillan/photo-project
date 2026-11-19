@@ -36,10 +36,51 @@ function Notice({ title, children }: { title: string; children?: ReactNode }) {
   );
 }
 
+const PLATFORM_DOMAIN = import.meta.env.VITE_PLATFORM_DOMAIN || "localhost";
+
+function platformSignupUrl(): string {
+  const scheme = window.location.protocol === "http:" ? "http:" : "https:";
+  return `${scheme}//${PLATFORM_DOMAIN}/register?utm_source=tienda-ejemplo&utm_medium=referral`;
+}
+
+function DemoBanner() {
+  return (
+    <div className="bg-accent px-5 py-2 text-center text-sm text-void">
+      Esta es una tienda de ejemplo hecha con Galeriza.{" "}
+      <a href={platformSignupUrl()} className="font-medium underline underline-offset-2">
+        Creá la tuya gratis →
+      </a>
+    </div>
+  );
+}
+
+function DemoCheckout() {
+  return (
+    <div className="mt-8 rounded-ui border border-accent/50 bg-surface p-5">
+      <h2 className="font-display text-xl">Así compran tus clientes</h2>
+      <p className="mt-2 text-sm leading-relaxed text-fg-muted">
+        En una tienda real, acá tu cliente deja su nombre y email, paga con Mercado Pago y recibe al
+        instante el link para descargar sus fotos en alta resolución, sin marca de agua. Vos no
+        tenés que hacer nada: la plata va directo a tu cuenta.
+      </p>
+      <p className="mt-2 text-sm text-fg-dim">
+        Esta tienda es de ejemplo, así que no se cobra nada.
+      </p>
+      <a
+        href={platformSignupUrl()}
+        className="mt-4 inline-block rounded-ui bg-accent px-5 py-2.5 text-sm font-medium text-void hover:bg-accent-soft"
+      >
+        Crear mi tienda gratis
+      </a>
+    </div>
+  );
+}
+
 function Shell({ data, children }: { data: PublicStorefront; children: ReactNode }) {
   const cart = useCart();
   return (
     <div className="min-h-screen">
+      {data.store.isDemo ? <DemoBanner /> : null}
       <header className="sticky top-0 z-20 border-b border-line/60 bg-void/85 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-4">
           <Link to="/" className="font-display text-xl text-fg">
@@ -56,6 +97,9 @@ function Shell({ data, children }: { data: PublicStorefront; children: ReactNode
       {children}
       <footer className="mt-24 border-t border-line/60 px-5 py-8 text-center text-xs text-fg-dim">
         © {new Date().getFullYear()} {data.content.displayName}
+        {data.store.isDemo ? (
+          <p className="mt-2">Fotos de ejemplo de dominio público (CC0), vía Wikimedia Commons.</p>
+        ) : null}
       </footer>
     </div>
   );
@@ -471,7 +515,9 @@ function CartPage({ data }: { data: PublicStorefront }) {
             </li>
           </ul>
 
-          {data.store.purchasesEnabled ? (
+          {data.store.isDemo ? (
+            <DemoCheckout />
+          ) : data.store.purchasesEnabled ? (
             <form
               onSubmit={(event) => void checkout(event)}
               className="mt-8 space-y-4 rounded-ui border border-line bg-surface p-5"

@@ -1,5 +1,6 @@
 import { access } from "node:fs/promises";
 import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
+import { env } from "../../config/env.js";
 import { db } from "../../db/client.js";
 import {
   albums,
@@ -374,6 +375,7 @@ export async function getPublicStorefront(rawHostname: string) {
       name: store.name,
       slug: store.slug,
       purchasesEnabled: store.purchasesEnabled,
+      isDemo: env.DEMO_STORE_SLUGS.includes(store.slug.toLowerCase()),
       currency: "ARS",
       payments,
     },
