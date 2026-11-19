@@ -12,6 +12,7 @@ export function CatalogPage() {
   const storeId = currentStore?.id ?? "";
   const albums = useLoad(() => catalogApi.albums(storeId), [storeId]);
   const loose = useLoad(() => catalogApi.photos(storeId, { unassigned: true }), [storeId]);
+  const removed = useLoad(() => catalogApi.photos(storeId, { archived: true }), [storeId]);
   const [title, setTitle] = useState("");
   const [price, setPrice] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -131,6 +132,13 @@ export function CatalogPage() {
             </li>
           ) : null}
         </ul>
+        {removed.data && removed.data.photos.length > 0 ? (
+          <p className="mt-6 text-sm">
+            <Link to="/app/catalog/quitadas" className="text-fg-dim hover:text-fg">
+              Fotos quitadas de la tienda ({removed.data.photos.length}) →
+            </Link>
+          </p>
+        ) : null}
       </div>
     </>
   );

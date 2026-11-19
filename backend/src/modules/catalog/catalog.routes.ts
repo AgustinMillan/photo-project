@@ -95,6 +95,7 @@ export const catalogRoutes: FastifyPluginAsync = async (app) => {
       photos: await listPhotos(access, {
         albumId: query.albumId,
         unassigned: Boolean(query.unassigned),
+        archived: Boolean(query.archived),
       }),
     };
   });

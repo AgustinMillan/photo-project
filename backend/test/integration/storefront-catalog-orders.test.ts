@@ -457,6 +457,52 @@ describe("catalog and media", () => {
     );
   });
 
+  it("removes a photo from the store, keeps it for buyers and can restore it", async () => {
+    const owner = await createOwner("remove@example.com", "remove-studio");
+    const cover = (await upload(owner, await image("#334455"), "?status=published")).json().photo;
+    const other = (await upload(owner, await image("#556677"), "?status=published")).json().photo;
+    await saveAndPublish(owner, { coverPhotoId: cover.id });
+    const host = "remove-studio.localhost";
+    expect(
+      (await publicGet(host, "/api/v1/public/storefront")).json().content.coverUrl,
+    ).toBeTruthy();
+
+    const removed = await app.inject({
+      method: "POST",
+      url: `/api/v1/stores/${owner.storeId}/photos/bulk`,
+      headers: auth(owner.token),
+      payload: { photoIds: [cover.id], status: "archived" },
+    });
+    expect(removed.json()).toMatchObject({ updated: 1 });
+
+    const active = await app.inject({
+      method: "GET",
+      url: `/api/v1/stores/${owner.storeId}/photos?unassigned=1`,
+      headers: auth(owner.token),
+    });
+    expect(active.json().photos.map((p: { id: string }) => p.id)).toEqual([other.id]);
+    const archivedList = await app.inject({
+      method: "GET",
+      url: `/api/v1/stores/${owner.storeId}/photos?archived=1`,
+      headers: auth(owner.token),
+    });
+    expect(archivedList.json().photos.map((p: { id: string }) => p.id)).toEqual([cover.id]);
+
+    // The published storefront no longer shows a removed photo as its cover.
+    const storefront = (await publicGet(host, "/api/v1/public/storefront")).json();
+    expect(storefront.content.coverUrl).toBeNull();
+
+    const restored = await app.inject({
+      method: "PATCH",
+      url: `/api/v1/stores/${owner.storeId}/photos/${cover.id}`,
+      headers: auth(owner.token),
+      payload: { status: "draft" },
+    });
+    expect(restored.statusCode).toBe(200);
+    const rows = await client`select status from photos where id = ${cover.id}`;
+    expect(rows[0]?.status).toBe("draft");
+  });
+
   it("replaces a photo keeping previous versions, and a failed replace changes nothing", async () => {
     const owner = await createOwner("replace@example.com", "replace-studio");
     const photo = (await upload(owner, await image("#aaaaaa"))).json().photo;

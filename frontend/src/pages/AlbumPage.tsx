@@ -30,6 +30,7 @@ function PhotoCard({
   const [title, setTitle] = useState(photo.title);
   const [price, setPrice] = useState(centsToInput(photo.priceCents));
   const [error, setError] = useState<string | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const replaceInput = useRef<HTMLInputElement>(null);
 
   async function patch(body: Parameters<typeof catalogApi.updatePhoto>[2]) {
@@ -131,9 +132,9 @@ function PhotoCard({
           <button
             type="button"
             className="text-danger/80 hover:text-danger"
-            onClick={() => void patch({ status: "archived" })}
+            onClick={() => setConfirmRemove(true)}
           >
-            · Archivar
+            · Quitar de la tienda
           </button>
           <input
             ref={replaceInput}
@@ -143,6 +144,30 @@ function PhotoCard({
             onChange={(event) => void replace(event)}
           />
         </div>
+        {confirmRemove ? (
+          <div className="rounded-ui border border-danger/40 bg-danger/10 p-2 text-xs text-fg-muted">
+            <p>
+              Deja de verse en tu tienda. La foto queda guardada: quien ya la compró la puede seguir
+              descargando, y la puedes recuperar en “Fotos quitadas”.
+            </p>
+            <div className="mt-2 flex gap-3">
+              <button
+                type="button"
+                className="font-medium text-danger hover:underline"
+                onClick={() => void patch({ status: "archived" })}
+              >
+                Sí, quitar
+              </button>
+              <button
+                type="button"
+                className="text-fg-dim hover:text-fg"
+                onClick={() => setConfirmRemove(false)}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        ) : null}
         {photo.version > 1 ? (
           <p className="text-[11px] text-fg-dim">Versión {photo.version}</p>
         ) : null}
@@ -239,7 +264,17 @@ export function AlbumPage() {
     albums.reload();
   }
 
-  async function bulk(body: { status?: "published" | "draft"; priceCents?: number | null }) {
+  async function bulk(body: {
+    status?: "published" | "draft" | "archived";
+    priceCents?: number | null;
+  }) {
+    if (
+      body.status === "archived" &&
+      !window.confirm(
+        `¿Quitar ${selected.size} fotos de la tienda? Quedan guardadas: quien ya las compró las puede seguir descargando y las puedes recuperar en “Fotos quitadas”.`,
+      )
+    )
+      return;
     try {
       const result = await catalogApi.bulkPhotos(storeId, { photoIds: [...selected], ...body });
       setMessage({ tone: "ok", text: `${result.updated} fotos actualizadas.` });
@@ -393,6 +428,9 @@ export function AlbumPage() {
           </Button>
           <Button variant="ghost" onClick={() => void bulk({ status: "draft" })}>
             Ocultar
+          </Button>
+          <Button variant="ghost" onClick={() => void bulk({ status: "archived" })}>
+            Quitar de la tienda
           </Button>
           <input
             aria-label="Precio para las elegidas"

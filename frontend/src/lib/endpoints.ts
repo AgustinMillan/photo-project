@@ -138,12 +138,17 @@ export const catalogApi = {
     api.delete<{ mode: string; affectedPhotos: number }>(
       `/stores/${storeId}/albums/${albumId}?mode=${mode}`,
     ),
-  photos: (storeId: string, filter: { albumId?: string; unassigned?: boolean }) => {
-    const query = filter.albumId
-      ? `?albumId=${filter.albumId}`
-      : filter.unassigned
-        ? "?unassigned=1"
-        : "";
+  photos: (
+    storeId: string,
+    filter: { albumId?: string; unassigned?: boolean; archived?: boolean },
+  ) => {
+    const query = filter.archived
+      ? "?archived=1"
+      : filter.albumId
+        ? `?albumId=${filter.albumId}`
+        : filter.unassigned
+          ? "?unassigned=1"
+          : "";
     return api.get<{ photos: Photo[] }>(`/stores/${storeId}/photos${query}`);
   },
   upload: (

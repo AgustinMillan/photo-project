@@ -1,5 +1,5 @@
 import { access } from "node:fs/promises";
-import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, ne, sql } from "drizzle-orm";
 import { env } from "../../config/env.js";
 import { db } from "../../db/client.js";
 import {
@@ -309,7 +309,7 @@ async function heroUrlForPhoto(storeId: string, photoId: string | null): Promise
     .select({ assetId: photoVersions.mediaAssetId })
     .from(photos)
     .innerJoin(photoVersions, currentVersionJoin)
-    .where(and(eq(photos.id, photoId), eq(photos.storeId, storeId)))
+    .where(and(eq(photos.id, photoId), eq(photos.storeId, storeId), ne(photos.status, "archived")))
     .limit(1);
   if (!row) return null;
   try {
@@ -326,7 +326,7 @@ async function coverUrlForPhoto(storeId: string, photoId: string | null): Promis
     .select({ assetId: photoVersions.mediaAssetId })
     .from(photos)
     .innerJoin(photoVersions, currentVersionJoin)
-    .where(and(eq(photos.id, photoId), eq(photos.storeId, storeId)))
+    .where(and(eq(photos.id, photoId), eq(photos.storeId, storeId), ne(photos.status, "archived")))
     .limit(1);
   return row ? mediaUrl(row.assetId, "preview") : null;
 }

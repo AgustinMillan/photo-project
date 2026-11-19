@@ -38,6 +38,7 @@ export const photoIdParamsSchema = z.object({
 export const listPhotosQuerySchema = z.object({
   albumId: z.string().uuid().optional(),
   unassigned: z.enum(["1", "true"]).optional(),
+  archived: z.enum(["1", "true"]).optional(),
 });
 
 export const uploadPhotoQuerySchema = z.object({
