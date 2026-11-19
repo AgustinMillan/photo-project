@@ -282,8 +282,10 @@ export async function createOrder(rawHostname: string, input: CreateOrderInput) 
   const total = formatMoney(order.totalCents, order.currency);
 
   // Emails go out in the background so the customer is not kept waiting on SMTP.
+  const sender = await storeSender(store.id);
   void notify(
     sendEmail({
+      ...sender,
       to: order.customerEmail,
       subject: `Tu pedido ${order.code} en ${store.name}`,
       text:
@@ -311,13 +313,15 @@ export async function createOrder(rawHostname: string, input: CreateOrderInput) 
           ? [
               `<p>Hola ${escapeHtml(order.customerName)},</p>`,
               `<p>Recibimos tu pedido <strong>${order.code}</strong> por <strong>${total}</strong>.</p>`,
-              `<p>Si todavía no completaste el pago con Mercado Pago, podés hacerlo desde <a href="${link}">este enlace</a>. Apenas se apruebe, ahí mismo vas a poder descargar tus fotos.</p>`,
+              "<p>Si todavía no completaste el pago con Mercado Pago, podés hacerlo desde acá. Apenas se apruebe, ahí mismo vas a poder descargar tus fotos.</p>",
+              `<p><a href="${link}">Ver mi pedido</a></p>`,
             ].join("")
           : [
               `<p>Hola ${escapeHtml(order.customerName)},</p>`,
               `<p>Recibimos tu pedido <strong>${order.code}</strong> por <strong>${total}</strong>.</p>`,
               `<p><strong>Cómo pagar:</strong><br>${escapeHtml(order.paymentInstructions || "El fotógrafo te va a contactar con los datos de pago.").replace(/\n/g, "<br>")}</p>`,
-              `<p>Cuando el pago se confirme, vas a poder descargar tus fotos desde <a href="${link}">este enlace</a>.</p>`,
+              "<p>Cuando el pago se confirme, vas a poder descargar tus fotos desde tu pedido.</p>",
+              `<p><a href="${link}">Ver mi pedido</a></p>`,
             ].join(""),
     }),
   );
@@ -347,6 +351,23 @@ async function notify(promise: Promise<void>): Promise<void> {
     // The order exists either way; the photographer can re-send the link.
     logger.error({ err: error }, "Failed to send order email");
   }
+}
+
+/** Sender details for emails a store sends to its customers. */
+async function storeSender(storeId: string) {
+  const [row] = await db
+    .select({ name: stores.name, email: accounts.billingEmail })
+    .from(stores)
+    .innerJoin(accounts, eq(accounts.id, stores.accountId))
+    .where(eq(stores.id, storeId))
+    .limit(1);
+  const name = row?.name ?? "Tu fotógrafo";
+  return {
+    fromName: `${name} vía Galeriza`,
+    brand: name,
+    replyTo: row?.email ?? undefined,
+    footer: `${name} · Tienda creada con Galeriza (galeriza.com.ar). Si tenés dudas sobre tu pedido, respondé este email.`,
+  };
 }
 
 async function notifyOwner(storeId: string, code: string, customer: string, total: string) {
@@ -704,12 +725,14 @@ export async function notifyOrderPaid(order: typeof orders.$inferSelect): Promis
     .limit(1);
   const hostname = (await storeHostname(order.storeId)) ?? store?.slug ?? "";
   const link = orderLink(hostname, order.id);
+  const sender = await storeSender(order.storeId);
   void notify(
     sendEmail({
+      ...sender,
       to: order.customerEmail,
       subject: `Tus fotos del pedido ${order.code} están listas`,
       text: `Hola ${order.customerName},\n\nConfirmamos el pago de tu pedido ${order.code}. Ya podés descargar tus fotos en alta resolución:\n${link}\n\nGuardá este enlace: lo podés usar cuando quieras.`,
-      html: `<p>Hola ${escapeHtml(order.customerName)},</p><p>Confirmamos el pago de tu pedido <strong>${order.code}</strong>. Ya podés <a href="${link}">descargar tus fotos en alta resolución</a>.</p><p>Guardá este enlace: lo podés usar cuando quieras.</p>`,
+      html: `<p>Hola ${escapeHtml(order.customerName)},</p><p>Confirmamos el pago de tu pedido <strong>${order.code}</strong>. Ya podés descargar tus fotos en alta resolución.</p><p><a href="${link}">Descargar mis fotos</a></p><p>Guardá este email: el enlace lo podés usar cuando quieras.</p>`,
     }),
   );
 }
