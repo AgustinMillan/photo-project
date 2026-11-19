@@ -7,6 +7,7 @@ import { requireStoreAccess } from "../stores/store-access.js";
 import { storeParamsSchema } from "../stores/stores.schemas.js";
 import { albumParamsSchema, updateStorefrontSchema } from "./storefront.schemas.js";
 import {
+  getOnboardingProgress,
   getPublicAlbum,
   getPublicStorefront,
   getStorefrontAdmin,
@@ -23,6 +24,13 @@ export const storefrontRoutes: FastifyPluginAsync = async (app) => {
     const { storeId } = storeParamsSchema.parse(request.params);
     const access = await requireStoreAccess(user.id, storeId);
     return getStorefrontAdmin(access);
+  });
+
+  app.get("/stores/:storeId/onboarding", { preHandler: authenticate }, async (request) => {
+    const user = await requireActiveUser(request.user.sub);
+    const { storeId } = storeParamsSchema.parse(request.params);
+    await requireStoreAccess(user.id, storeId);
+    return { progress: await getOnboardingProgress(storeId) };
   });
 
   app.put("/stores/:storeId/storefront", { preHandler: authenticate }, async (request) => {

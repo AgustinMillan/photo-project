@@ -1,7 +1,9 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext.tsx";
+import { billingApi } from "../lib/endpoints.ts";
 import { roleLabel } from "../lib/format.ts";
 import { useIsAdmin } from "../lib/useIsAdmin.ts";
+import { useLoad } from "../lib/useLoad.ts";
 import { useWorkspace } from "../workspace/WorkspaceContext.tsx";
 import { Button } from "./ui.tsx";
 
@@ -21,6 +23,11 @@ export function DashboardLayout() {
   const { user, logout } = useAuth();
   const { stores, currentStore, selectStore } = useWorkspace();
   const isAdmin = useIsAdmin();
+  const location = useLocation();
+  // Re-read on navigation so the banner disappears right after paying.
+  const subscription = useLoad(() => billingApi.subscription(), [location.pathname]);
+  const sub = subscription.data?.subscription ?? null;
+  const inactive = sub !== null && !sub.isUsable && !sub.isPilot;
 
   return (
     <div className="min-h-screen md:grid md:grid-cols-[16rem_1fr]">
@@ -90,6 +97,25 @@ export function DashboardLayout() {
       </aside>
 
       <main className="p-5 md:p-10">
+        {inactive && location.pathname !== "/app/subscription" ? (
+          <div className="mb-6 rounded-ui border border-danger/40 bg-danger/10 p-4 text-sm">
+            <p className="font-medium text-fg">
+              {sub?.status === "expired" && sub.trialEndsAt && !sub.currentPeriodEnd
+                ? "Tu prueba gratis terminó."
+                : "Tu plan no está activo."}
+            </p>
+            <p className="mt-1 text-fg-muted">
+              Tu tienda sigue visible, pero no recibe compras nuevas y las estadísticas están
+              pausadas. Tus fotos, galerías y pedidos siguen guardados.
+            </p>
+            <Link
+              to="/app/subscription"
+              className="mt-3 inline-block rounded-ui bg-accent px-3 py-1.5 font-medium text-void hover:bg-accent-soft"
+            >
+              Elegir mi plan
+            </Link>
+          </div>
+        ) : null}
         <Outlet />
       </main>
     </div>

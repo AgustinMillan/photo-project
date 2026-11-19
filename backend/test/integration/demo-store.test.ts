@@ -57,12 +57,12 @@ async function publishedStore(slug: string) {
     headers: auth,
   });
   expect(publish.statusCode).toBe(200);
-  return `${slug}.localhost`;
+  return { host: `${slug}.localhost`, storeId, auth };
 }
 
 describe("showcase store", () => {
   it("is marked as demo and does not take orders", async () => {
-    const host = await publishedStore("ejemplo");
+    const { host } = await publishedStore("ejemplo");
     const storefront = await app.inject({
       method: "GET",
       url: "/api/v1/public/storefront",
@@ -85,12 +85,32 @@ describe("showcase store", () => {
   });
 
   it("leaves regular stores unchanged", async () => {
-    const host = await publishedStore("normal");
+    const { host } = await publishedStore("normal");
     const storefront = await app.inject({
       method: "GET",
       url: "/api/v1/public/storefront",
       headers: { host },
     });
     expect(storefront.json().store.isDemo).toBe(false);
+  });
+
+  it("reports onboarding progress for the first-steps guide", async () => {
+    const { storeId, auth } = await publishedStore("nuevo");
+    const res = await app.inject({
+      method: "GET",
+      url: `/api/v1/stores/${storeId}/onboarding`,
+      headers: auth,
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().progress).toMatchObject({
+      profile: false,
+      photos: false,
+      payments: false,
+      published: true,
+      firstVisit: false,
+      firstSale: false,
+      photoCount: 0,
+      mercadoPago: false,
+    });
   });
 });

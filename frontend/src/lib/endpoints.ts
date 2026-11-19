@@ -17,6 +17,7 @@ import type {
   Invitation,
   Member,
   MercadoPagoConnection,
+  OnboardingProgress,
   OrderDetail,
   OrderStatus,
   OrderSummary,
@@ -109,6 +110,8 @@ export const publicApi = {
 
 export const storefrontApi = {
   get: (storeId: string) => api.get<StorefrontAdmin>(`/stores/${storeId}/storefront`),
+  onboarding: (storeId: string) =>
+    api.get<{ progress: OnboardingProgress }>(`/stores/${storeId}/onboarding`),
   save: (storeId: string, draft: StorefrontContent) =>
     api.put<{ draft: StorefrontContent }>(`/stores/${storeId}/storefront`, draft),
   publish: (storeId: string) =>

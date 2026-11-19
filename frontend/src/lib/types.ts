@@ -486,3 +486,14 @@ export type AdminAction =
   | { action: "pilot_start"; email: string; note?: string }
   | { action: "pilot_end"; email: string; trialDays?: number; note?: string }
   | { action: "verify_email"; email: string };
+
+export type OnboardingProgress = {
+  profile: boolean;
+  photos: boolean;
+  payments: boolean;
+  published: boolean;
+  firstVisit: boolean;
+  firstSale: boolean;
+  photoCount: number;
+  mercadoPago: boolean;
+};

@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { FirstSteps } from "../components/FirstSteps.tsx";
 import { Alert, Badge, Card, PageHeader, Spinner, Stat } from "../components/ui.tsx";
 import { billingApi, storesApi } from "../lib/endpoints.ts";
 import { errorMessage } from "../lib/errors.ts";
@@ -81,6 +82,10 @@ export function OverviewPage() {
         <Stat label="Equipo" value={memberCount ?? "—"} hint="miembros activos" />
       </div>
 
+      <div className="mt-6">
+        <FirstSteps storeId={currentStore.id} storeLink={url} />
+      </div>
+
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
         <Card title="Ventas">
           {sales.loading ? (
@@ -97,21 +102,6 @@ export function OverviewPage() {
               </p>
             </div>
           )}
-        </Card>
-
-        <Card title="Próximos pasos">
-          <ul className="space-y-2 text-sm text-fg-muted">
-            <li>✓ Tienda creada</li>
-            <li>
-              {memberCount && memberCount > 1 ? "✓" : "○"} Invitar a tu equipo (
-              <Link className="text-accent hover:text-accent-soft" to="/app/team">
-                Equipo
-              </Link>
-              )
-            </li>
-            <li className="text-fg-dim">○ Subir galerías de fotos — próximamente</li>
-            <li className="text-fg-dim">○ Publicar tu vitrina — próximamente</li>
-          </ul>
         </Card>
       </div>
     </>
