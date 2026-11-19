@@ -8,6 +8,7 @@ import { AdminPage } from "./pages/AdminPage.tsx";
 import { AlbumPage } from "./pages/AlbumPage.tsx";
 import { CatalogPage } from "./pages/CatalogPage.tsx";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage.tsx";
+import { LandingPage } from "./pages/LandingPage.tsx";
 import { LoginPage } from "./pages/LoginPage.tsx";
 import { OnboardingPage } from "./pages/OnboardingPage.tsx";
 import { OrdersPage } from "./pages/OrdersPage.tsx";
@@ -43,6 +44,7 @@ export function App() {
     <BrowserRouter>
       <AuthProvider>
         <Routes>
+          <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
