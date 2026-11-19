@@ -90,6 +90,63 @@ export type Plan = {
   description: string | null;
   status: "active" | "retired";
   sortOrder: number;
+  priceCents: number | null;
+  currency: string;
+};
+
+export type SellablePlan = {
+  code: string;
+  name: string;
+  description: string | null;
+  priceCents: number;
+  currency: string;
+  features: { stats: boolean };
+};
+
+export type AutoPayment = {
+  provider: "mercadopago";
+  status: string;
+  payerEmail: string | null;
+  nextPaymentAt: string | null;
+  planCode: string | null;
+};
+
+export type SubscriptionPayment = {
+  id: string;
+  status: string;
+  amountCents: number;
+  currency: string;
+  paidAt: string | null;
+  periodStart: string | null;
+  periodEnd: string | null;
+  createdAt: string;
+  planName: string | null;
+};
+
+export type StoreStats = {
+  days: number;
+  from: string;
+  to: string;
+  currency: string;
+  totals: {
+    visitors: number;
+    views: number;
+    orders: number;
+    revenueCents: number;
+    averageOrderCents: number;
+    conversionRate: number | null;
+  };
+  previous: { visitors: number; orders: number; revenueCents: number };
+  series: { day: string; visitors: number; views: number; orders: number; revenueCents: number }[];
+  topPhotos: {
+    id: string;
+    title: string;
+    thumbUrl: string | null;
+    sales: number;
+    revenueCents: number;
+  }[];
+  topAlbums: { id: string; title: string; sales: number; revenueCents: number }[];
+  paymentMethods: { method: string; orders: number }[];
 };
 
 export type Entitlement = {
@@ -118,6 +175,7 @@ export type Subscription = {
   createdAt: string;
   updatedAt: string;
   entitlements: Entitlement[];
+  autoPayment: AutoPayment | null;
 };
 
 export type SalesStatus = {
@@ -326,6 +384,22 @@ export type MercadoPagoConnection = {
 
 export type AdminOverview = {
   days: number;
+  funnel: {
+    landingVisitors: number;
+    signups: number;
+    withStore: number;
+    published: number;
+    withPhotos: number;
+    withSale: number;
+    withAutoPay: number;
+  };
+  revenue: {
+    mrrCents: number;
+    payingAccounts: number;
+    trialsWithAutoPay: number;
+    collectedPeriodCents: number;
+    failedPaymentsPeriod: number;
+  };
   totals: {
     users: number;
     verifiedUsers: number;
@@ -353,6 +427,7 @@ export type AdminOverview = {
     orders: number;
     paidOrders: number;
     gmvCents: number;
+    landingVisitors: number;
   }>;
   recentOrders: Array<{
     code: string;

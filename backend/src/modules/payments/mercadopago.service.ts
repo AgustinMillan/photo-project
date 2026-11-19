@@ -7,6 +7,10 @@ import { open, seal } from "../../shared/crypto/secretbox.js";
 import { AppError } from "../../shared/errors/app-error.js";
 import { logger } from "../../shared/logger.js";
 import {
+  handleSubscriptionWebhook,
+  SUBSCRIPTION_WEBHOOK_TYPES,
+} from "../billing/billing.mercadopago.js";
+import {
   notifyOrderPaid,
   orderAccessToken,
   settleOrderPayment,
@@ -377,6 +381,10 @@ export async function handleMercadoPagoWebhook(input: {
       "Rejected Mercado Pago webhook with an invalid signature",
     );
     return { status: 401, result: "invalid_signature" };
+  }
+  if (input.type && SUBSCRIPTION_WEBHOOK_TYPES.has(input.type)) {
+    if (!input.dataId) return { status: 200, result: "ignored" };
+    return { status: 200, result: await handleSubscriptionWebhook(input.type, input.dataId) };
   }
   if (input.type && input.type !== "payment") return { status: 200, result: "ignored_type" };
   if (!input.dataId || !input.storeId || !/^[0-9a-f-]{36}$/i.test(input.storeId)) {

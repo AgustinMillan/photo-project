@@ -80,6 +80,7 @@ const FEATURE_LABELS: Record<string, string> = {
   "custom_domain.enabled": "Dominio propio",
   "sections.reorder": "Reordenar secciones",
   "purchases.enabled": "Compras habilitadas",
+  "stats.enabled": "Estadísticas de visitas y ventas",
 };
 
 export function featureLabel(featureKey: string): string {

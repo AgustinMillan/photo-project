@@ -25,10 +25,13 @@ import type {
   PublicStore,
   PublicStorefront,
   SalesStatus,
+  SellablePlan,
   Store,
   StorefrontAdmin,
   StorefrontContent,
+  StoreStats,
   Subscription,
+  SubscriptionPayment,
 } from "./types.ts";
 
 export const authApi = {
@@ -83,6 +86,15 @@ export const billingApi = {
   features: (storeId: string) =>
     api.get<{ entitlements: Record<string, Entitlement> }>(`/stores/${storeId}/features`),
   sales: (storeId: string) => api.get<{ sales: SalesStatus }>(`/stores/${storeId}/sales-status`),
+  plans: () => api.get<{ plans: SellablePlan[] }>("/billing/plans"),
+  checkout: (body: { planCode: string; payerEmail?: string }) =>
+    api.post<{ url: string; updated: boolean }>("/accounts/me/subscription/checkout", body),
+  sync: () => api.post<{ subscription: Subscription | null }>("/accounts/me/subscription/sync"),
+  cancel: () => api.post<{ subscription: Subscription | null }>("/accounts/me/subscription/cancel"),
+  payments: () =>
+    api.get<{ payments: SubscriptionPayment[] }>("/accounts/me/subscription/payments"),
+  stats: (storeId: string, days: number) =>
+    api.get<{ stats: StoreStats }>(`/stores/${storeId}/stats?days=${days}`),
 };
 
 export const publicApi = {

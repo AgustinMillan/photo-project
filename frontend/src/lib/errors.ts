@@ -28,6 +28,13 @@ const MESSAGES: Record<string, string> = {
   INVITATION_NOT_FOUND: "No encontramos esa invitación.",
   STORE_MEMBER_NOT_FOUND: "No encontramos a ese miembro.",
   SUBSCRIPTION_INACTIVE: "Tu suscripción no está activa.",
+  STATS_NOT_IN_PLAN: "Las estadísticas están incluidas en el plan Profesional.",
+  BILLING_UNAVAILABLE: "El pago automático no está disponible en este momento.",
+  SUBSCRIPTION_IS_PILOT: "Como cliente piloto no tienes que pagar nada.",
+  AUTO_PAYMENT_MISSING: "No tienes un pago automático activo.",
+  PAYMENT_PROVIDER_ERROR:
+    "Mercado Pago no respondió como esperábamos. Revisa el email de Mercado Pago e inténtalo de nuevo.",
+  PLAN_NOT_FOUND: "Ese plan no está disponible.",
   VALIDATION_ERROR: "Revisa los datos ingresados.",
   NETWORK_ERROR: "No pudimos conectar con el servidor. Reintenta en unos segundos.",
 };

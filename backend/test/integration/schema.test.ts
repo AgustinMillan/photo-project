@@ -33,6 +33,7 @@ describe("schema", () => {
       "order_item_photos",
       "order_items",
       "orders",
+      "page_visits",
       "password_reset_tokens",
       "payments",
       "photo_versions",
@@ -47,6 +48,7 @@ describe("schema", () => {
       "store_publications",
       "stores",
       "subscription_events",
+      "subscription_payments",
       "subscriptions",
       "user_sessions",
       "users",
@@ -60,6 +62,7 @@ describe("schema", () => {
 
     expect(planRows).toEqual([
       { code: "base", status: "active" },
+      { code: "pro", status: "active" },
       { code: "intermediate", status: "active" },
       { code: "business", status: "active" },
     ]);

@@ -10,6 +10,10 @@ import {
   startPilot,
   verifyUserEmail,
 } from "../modules/billing/billing.admin.js";
+import {
+  sendTrialEndingReminders,
+  syncSubscription,
+} from "../modules/billing/billing.mercadopago.js";
 
 const USAGE = `Uso: pnpm admin <comando> [opciones]
 
@@ -22,11 +26,12 @@ Comandos:
   pilot:start <email>                    Cliente piloto: todo habilitado, gratis y sin vencimiento
   pilot:end   <email> [--trial-days N]   Termina el piloto; pasa a prueba del plan base (por defecto 30 días)
   verify-email <email>                   Marca el email como verificado (mientras no haya proveedor de email)
+  billing:daily                          Recordatorios de fin de prueba y sincronización con Mercado Pago (cron)
 
 Opciones comunes:
   --note "texto"                         Nota que queda en la auditoría (ej.: "transferencia 18/11")
 
-Planes: base, intermediate, business`;
+Planes: base, pro (Profesional), business (piloto)`;
 
 function formatDate(date: Date | null): string {
   return date ? date.toISOString().slice(0, 10) : "-";
@@ -135,6 +140,12 @@ export async function runAdminCli(argv: string[]): Promise<number> {
         note: values.note,
       });
       break;
+    case "billing:daily": {
+      const reminders = await sendTrialEndingReminders();
+      const synced = await syncAllAutoPayments();
+      console.log(`Recordatorios enviados: ${reminders}. Suscripciones sincronizadas: ${synced}.`);
+      return 0;
+    }
     case "verify-email":
       await verifyUserEmail({ email: requireEmail() });
       console.log("Email verificado.");
@@ -147,6 +158,25 @@ export async function runAdminCli(argv: string[]): Promise<number> {
   console.log("Listo.");
   printSummaries(await listSubscriptions({ email: requireEmail() }));
   return 0;
+}
+
+/** Safety net in case a webhook was lost: re-read every automatic payment. */
+async function syncAllAutoPayments(): Promise<number> {
+  const { db } = await import("../db/client.js");
+  const { subscriptions } = await import("../db/schema/index.js");
+  const { and, isNotNull, isNull } = await import("drizzle-orm");
+  const rows = await db
+    .select({ id: subscriptions.id })
+    .from(subscriptions)
+    .where(and(isNull(subscriptions.endedAt), isNotNull(subscriptions.mpPreapprovalId)));
+  for (const row of rows) {
+    try {
+      await syncSubscription(row.id);
+    } catch (error) {
+      console.error(`No se pudo sincronizar ${row.id}:`, error);
+    }
+  }
+  return rows.length;
 }
 
 const isEntrypoint = process.argv[1]?.replace(/\.ts$/, ".js").endsWith("admin/cli.js");

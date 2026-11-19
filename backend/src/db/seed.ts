@@ -27,6 +27,7 @@ export async function seedDefaultPlans(): Promise<void> {
           name: definition.name,
           description: definition.description,
           sortOrder: definition.sortOrder,
+          priceCents: definition.priceCents,
         })
         .onConflictDoUpdate({
           target: plans.code,

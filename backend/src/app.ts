@@ -8,6 +8,7 @@ import Fastify, { type FastifyBaseLogger, type FastifyInstance } from "fastify";
 import { env } from "./config/env.js";
 import { accountsRoutes } from "./modules/accounts/accounts.routes.js";
 import { adminRoutes } from "./modules/admin/admin.routes.js";
+import { analyticsRoutes } from "./modules/analytics/analytics.routes.js";
 import { authRoutes } from "./modules/auth/auth.routes.js";
 import { billingRoutes } from "./modules/billing/billing.routes.js";
 import { catalogRoutes } from "./modules/catalog/catalog.routes.js";
@@ -65,6 +66,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(ordersRoutes, { prefix: "/api/v1" });
   await app.register(paymentsRoutes, { prefix: "/api/v1" });
   await app.register(adminRoutes, { prefix: "/api/v1" });
+  await app.register(analyticsRoutes, { prefix: "/api/v1" });
 
   return app;
 }
