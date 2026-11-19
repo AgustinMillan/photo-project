@@ -14,10 +14,11 @@ import { serviceContactUrl } from "../lib/contact.ts";
 import { shopApi } from "../lib/endpoints.ts";
 import { errorMessage } from "../lib/errors.ts";
 import { formatMoney } from "../lib/money.ts";
-import type { PublicPhoto, PublicStorefront } from "../lib/types.ts";
+import type { PhotoProtection, PublicPhoto, PublicStorefront } from "../lib/types.ts";
 import { useLoad } from "../lib/useLoad.ts";
 import { trackVisit } from "../lib/visit.ts";
 import { CartProvider, useCart } from "./cart.tsx";
+import { ProtectedImage } from "./ProtectedImage.tsx";
 
 function Loading() {
   return (
@@ -109,10 +110,12 @@ function PhotoGrid({
   photos,
   purchasesEnabled,
   coveredByAlbum,
+  protection,
 }: {
   photos: PublicPhoto[];
   purchasesEnabled: boolean;
   coveredByAlbum?: boolean;
+  protection?: PhotoProtection;
 }) {
   const cart = useCart();
   const [open, setOpen] = useState<PublicPhoto | null>(null);
@@ -135,7 +138,15 @@ function PhotoGrid({
               className="mb-3 break-inside-avoid overflow-hidden rounded-ui border border-line/60 bg-surface"
             >
               <button type="button" className="block w-full" onClick={() => setOpen(photo)}>
-                <img src={photo.thumbUrl} alt={photo.title} loading="lazy" className="w-full" />
+                <ProtectedImage
+                  src={photo.thumbUrl}
+                  alt={photo.title}
+                  loading="lazy"
+                  reveal={Boolean(protection?.grid.reveal)}
+                  radius={60}
+                  className="block w-full"
+                  imgClassName="block w-full"
+                />
               </button>
               <div className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
                 <span className="truncate text-fg-muted">{photo.title}</span>
@@ -173,11 +184,18 @@ function PhotoGrid({
           onClick={() => setOpen(null)}
           onKeyDown={() => undefined}
         >
-          <img
-            src={open.previewUrl}
-            alt={open.title}
-            className="max-h-[90vh] max-w-full object-contain"
-          />
+          {/* biome-ignore lint/a11y/noStaticElementInteractions: keeps clicks on the photo from closing the dialog */}
+          <div onClick={(event) => event.stopPropagation()} onKeyDown={() => undefined}>
+            <ProtectedImage
+              src={open.previewUrl}
+              alt={open.title}
+              reveal={Boolean(protection?.full.reveal)}
+              radius={110}
+              touchReveal
+              className="inline-block"
+              imgClassName="block max-h-[90vh] max-w-[calc(100vw-2rem)] object-contain"
+            />
+          </div>
           <button
             type="button"
             className="absolute top-4 right-4 font-mono text-sm text-fg-muted"
@@ -300,7 +318,11 @@ function HomePage({ data }: { data: PublicStorefront }) {
           {data.photos.length ? (
             <div className="mt-12">
               <h3 className="mb-4 font-display text-xl">Fotos</h3>
-              <PhotoGrid photos={data.photos} purchasesEnabled={data.store.purchasesEnabled} />
+              <PhotoGrid
+                photos={data.photos}
+                purchasesEnabled={data.store.purchasesEnabled}
+                protection={data.content.protection}
+              />
             </div>
           ) : null}
         </section>
@@ -411,7 +433,12 @@ function AlbumView({ purchasesEnabled }: { purchasesEnabled: boolean }) {
           Las compras no están disponibles en este momento.
         </p>
       ) : null}
-      <PhotoGrid photos={photos} purchasesEnabled={canBuy} coveredByAlbum={albumInCart} />
+      <PhotoGrid
+        photos={photos}
+        purchasesEnabled={canBuy}
+        coveredByAlbum={albumInCart}
+        protection={album.data.protection}
+      />
     </main>
   );
 }

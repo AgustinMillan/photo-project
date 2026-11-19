@@ -1,3 +1,4 @@
+import { createHmac } from "node:crypto";
 import { access } from "node:fs/promises";
 import { and, asc, desc, eq, isNull, ne, sql } from "drizzle-orm";
 import { env } from "../../config/env.js";
@@ -6,6 +7,7 @@ import {
   albums,
   auditLogs,
   mediaAssets,
+  type PhotoProtection,
   photos,
   photoVersions,
   STOREFRONT_SECTION_KEYS,
@@ -17,15 +19,119 @@ import {
 import { AppError } from "../../shared/errors/app-error.js";
 import { SECTIONS_REORDER_FEATURE } from "../billing/billing.constants.js";
 import { getEffectiveEntitlement, getStoreSalesStatus } from "../billing/billing.service.js";
-import { derivedPath, ensureCoverVariant } from "../catalog/media.js";
+import {
+  DEFAULT_PROTECTION,
+  derivedPath,
+  ensureCoverVariant,
+  ensureStyledVariant,
+  parseStyleKey,
+  type StyleContext,
+  styleKey,
+} from "../catalog/media.js";
 import { storePaymentOptions } from "../payments/payment-options.js";
 import type { StoreAccess } from "../stores/store-access.js";
 import { normalizeHostname } from "../stores/stores.constants.js";
 import { resolveStoreByHostname } from "../stores/stores.service.js";
 import type { UpdateStorefrontInput } from "./storefront.schemas.js";
 
+/** Signature that lets the panel load an asset's clean thumbnail. */
+export function thumbSignature(assetId: string): string {
+  return createHmac("sha256", env.JWT_ACCESS_SECRET)
+    .update(`thumb:${assetId}`)
+    .digest("base64url")
+    .slice(0, 22);
+}
+
+/**
+ * URLs for the photographer's panel. The clean thumbnail is signed so only
+ * links the panel hands out work; public pages use `publicMedia` instead.
+ */
 export function mediaUrl(assetId: string, variant: "thumb" | "preview" | "cover"): string {
-  return `/api/v1/public/media/${assetId}/${variant}.webp`;
+  const base = `/api/v1/public/media/${assetId}/${variant}.webp`;
+  return variant === "thumb" ? `${base}?sig=${thumbSignature(assetId)}` : base;
+}
+
+export function protectionOf(content: StorefrontContent): PhotoProtection {
+  return content.protection ?? DEFAULT_PROTECTION;
+}
+
+function styledUrl(assetId: string, context: StyleContext, content: StorefrontContent): string {
+  const key = styleKey(context, protectionOf(content)[context], content.watermarkText);
+  return `/api/v1/public/media/${assetId}/s/${key}.webp`;
+}
+
+/** Protected grid and full-view URLs for a public page, following the store's settings. */
+export function publicMedia(assetId: string, content: StorefrontContent) {
+  return {
+    thumbUrl: styledUrl(assetId, "grid", content),
+    previewUrl: styledUrl(assetId, "full", content),
+  };
+}
+
+const allowedStyles = new Map<
+  string,
+  { keys: Set<string>; watermarkText: string; expires: number }
+>();
+
+async function publishedStyles(storeId: string) {
+  const cached = allowedStyles.get(storeId);
+  if (cached && cached.expires > Date.now()) return cached;
+  const publication = await latestPublication(storeId);
+  const content = publication?.content ?? defaultStorefrontContent("");
+  const protection = protectionOf(content);
+  const entry = {
+    keys: new Set([
+      styleKey("grid", protection.grid, content.watermarkText),
+      styleKey("full", protection.full, content.watermarkText),
+    ]),
+    watermarkText: content.watermarkText,
+    expires: Date.now() + 30_000,
+  };
+  allowedStyles.set(storeId, entry);
+  return entry;
+}
+
+/**
+ * Path of a protected rendition, or null when the asset is unknown or the key
+ * is not one of the store's published settings (so nobody can ask for a
+ * weaker version than the photographer chose).
+ */
+export async function resolveStyledMedia(assetId: string, key: string): Promise<string | null> {
+  if (!parseStyleKey(key)) return null;
+  const [asset] = await db
+    .select({ storeId: mediaAssets.storeId, originalKey: mediaAssets.originalKey })
+    .from(mediaAssets)
+    .where(eq(mediaAssets.id, assetId))
+    .limit(1);
+  if (!asset) return null;
+  const styles = await publishedStyles(asset.storeId);
+  if (!styles.keys.has(key)) return null;
+  return ensureStyledVariant(assetId, asset.originalKey, key, styles.watermarkText);
+}
+
+/** Renders the published renditions of every visible photo in the background. */
+function warmPublishedRenditions(storeId: string, content: StorefrontContent): void {
+  const protection = protectionOf(content);
+  const keys = [
+    styleKey("grid", protection.grid, content.watermarkText),
+    styleKey("full", protection.full, content.watermarkText),
+  ];
+  allowedStyles.delete(storeId);
+  void (async () => {
+    const rows = await db
+      .select({ assetId: mediaAssets.id, originalKey: mediaAssets.originalKey })
+      .from(photos)
+      .innerJoin(photoVersions, currentVersionJoin)
+      .innerJoin(mediaAssets, eq(mediaAssets.id, photoVersions.mediaAssetId))
+      .where(and(eq(photos.storeId, storeId), eq(photos.status, "published")));
+    for (const row of rows) {
+      for (const key of keys) {
+        await ensureStyledVariant(row.assetId, row.originalKey, key, content.watermarkText).catch(
+          () => undefined,
+        );
+      }
+    }
+  })().catch(() => undefined);
 }
 
 export function defaultStorefrontContent(storeName: string): StorefrontContent {
@@ -42,6 +148,7 @@ export function defaultStorefrontContent(storeName: string): StorefrontContent {
     watermarkText: storeName,
     sections: STOREFRONT_SECTION_KEYS.map((key) => ({ key, enabled: true })),
     services: [],
+    protection: DEFAULT_PROTECTION,
   };
 }
 
@@ -59,7 +166,12 @@ export function normalizeStorefrontContent(content: StorefrontContent): Storefro
     if (!present.has(key))
       sections.splice(Math.min(index, sections.length), 0, { key, enabled: true });
   });
-  return { ...content, sections, services: content.services ?? [] };
+  return {
+    ...content,
+    sections,
+    services: content.services ?? [],
+    protection: content.protection ?? DEFAULT_PROTECTION,
+  };
 }
 
 async function readDraft(storeId: string, storeName: string): Promise<StorefrontContent> {
@@ -180,7 +292,7 @@ export async function updateStorefrontDraft(
 export async function publishStorefront(access: StoreAccess) {
   const draft = await readDraft(access.store.id, access.store.name);
 
-  return db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx) => {
     // Serialize concurrent publications of the same store.
     await tx
       .select({ id: stores.id })
@@ -224,6 +336,8 @@ export async function publishStorefront(access: StoreAccess) {
 
     return { version, publishedAt: now };
   });
+  warmPublishedRenditions(access.store.id, draft);
+  return result;
 }
 
 export async function unpublishStorefront(access: StoreAccess): Promise<void> {
@@ -275,7 +389,11 @@ export type PublicPhoto = {
   previewUrl: string;
 };
 
-async function publicPhotos(storeId: string, albumId: string | null): Promise<PublicPhoto[]> {
+async function publicPhotos(
+  storeId: string,
+  albumId: string | null,
+  content: StorefrontContent,
+): Promise<PublicPhoto[]> {
   const rows = await db
     .select({
       id: photos.id,
@@ -296,11 +414,7 @@ async function publicPhotos(storeId: string, albumId: string | null): Promise<Pu
     .orderBy(asc(photos.sortOrder), asc(photos.createdAt))
     .limit(500);
 
-  return rows.map(({ assetId, ...photo }) => ({
-    ...photo,
-    thumbUrl: mediaUrl(assetId, "thumb"),
-    previewUrl: mediaUrl(assetId, "preview"),
-  }));
+  return rows.map(({ assetId, ...photo }) => ({ ...photo, ...publicMedia(assetId, content) }));
 }
 
 async function heroUrlForPhoto(storeId: string, photoId: string | null): Promise<string | null> {
@@ -320,7 +434,11 @@ async function heroUrlForPhoto(storeId: string, photoId: string | null): Promise
   }
 }
 
-async function coverUrlForPhoto(storeId: string, photoId: string | null): Promise<string | null> {
+async function coverUrlForPhoto(
+  storeId: string,
+  photoId: string | null,
+  content: StorefrontContent,
+): Promise<string | null> {
   if (!photoId) return null;
   const [row] = await db
     .select({ assetId: photoVersions.mediaAssetId })
@@ -328,7 +446,7 @@ async function coverUrlForPhoto(storeId: string, photoId: string | null): Promis
     .innerJoin(photoVersions, currentVersionJoin)
     .where(and(eq(photos.id, photoId), eq(photos.storeId, storeId), ne(photos.status, "archived")))
     .limit(1);
-  return row ? mediaUrl(row.assetId, "preview") : null;
+  return row ? publicMedia(row.assetId, content).thumbUrl : null;
 }
 
 export async function getPublicStorefront(rawHostname: string) {
@@ -363,8 +481,8 @@ export async function getPublicStorefront(rawHostname: string) {
     albumRows.map(async ({ coverPhotoId, ...album }) => ({
       ...album,
       coverUrl:
-        (await coverUrlForPhoto(store.id, coverPhotoId)) ??
-        (await publicPhotos(store.id, album.id))[0]?.thumbUrl ??
+        (await coverUrlForPhoto(store.id, coverPhotoId, publication.content)) ??
+        (await publicPhotos(store.id, album.id, publication.content))[0]?.thumbUrl ??
         null,
     })),
   );
@@ -391,7 +509,7 @@ export async function getPublicStorefront(rawHostname: string) {
       ),
     },
     albums: albumViews.filter((album) => album.photoCount > 0),
-    photos: await publicPhotos(store.id, null),
+    photos: await publicPhotos(store.id, null, publication.content),
   };
 }
 
@@ -415,7 +533,14 @@ export async function getPublicAlbum(rawHostname: string, albumId: string) {
   }
 
   const sales = await getStoreSalesStatus(store.id);
-  return { album, photos: await publicPhotos(store.id, album.id), purchasesEnabled: sales.enabled };
+  const publication = await latestPublication(store.id);
+  const content = publication?.content ?? defaultStorefrontContent(store.name);
+  return {
+    album,
+    photos: await publicPhotos(store.id, album.id, content),
+    purchasesEnabled: sales.enabled,
+    protection: protectionOf(content),
+  };
 }
 
 export type OnboardingProgress = {

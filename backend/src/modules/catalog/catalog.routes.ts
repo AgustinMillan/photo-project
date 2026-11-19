@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import type { FastifyPluginAsync, FastifyRequest } from "fastify";
@@ -6,6 +7,7 @@ import { assertTrustedOrigin } from "../../shared/http/origin.js";
 import { routeRateLimit } from "../../shared/http/rate-limit.js";
 import { authenticate } from "../auth/auth.guard.js";
 import { requireActiveUser } from "../auth/auth.service.js";
+import { resolveStyledMedia, thumbSignature } from "../storefront/storefront.service.js";
 import { requireStoreAccess } from "../stores/store-access.js";
 import { storeParamsSchema } from "../stores/stores.schemas.js";
 import {
@@ -16,6 +18,7 @@ import {
   mediaParamsSchema,
   photoIdParamsSchema,
   removeAlbumQuerySchema,
+  styledMediaParamsSchema,
   updateAlbumSchema,
   updatePhotoSchema,
   uploadPhotoQuerySchema,
@@ -148,9 +151,42 @@ export const catalogRoutes: FastifyPluginAsync = async (app) => {
         throw new AppError({ statusCode: 404, code: "MEDIA_NOT_FOUND", message: "Not found." });
       }
       const variant = parsed.data.variant.replace(".webp", "") as MediaVariant;
+      // The clean thumbnail is only for the panel (and buyers): it needs a signature.
+      if (variant === "thumb") {
+        const { sig } = request.query as { sig?: string };
+        const expected = thumbSignature(parsed.data.assetId);
+        if (
+          typeof sig !== "string" ||
+          sig.length !== expected.length ||
+          !timingSafeEqual(Buffer.from(sig), Buffer.from(expected))
+        ) {
+          throw new AppError({ statusCode: 404, code: "MEDIA_NOT_FOUND", message: "Not found." });
+        }
+      }
       const file = derivedPath(parsed.data.assetId, variant);
       const info = await stat(file).catch(() => null);
       if (!info) {
+        throw new AppError({ statusCode: 404, code: "MEDIA_NOT_FOUND", message: "Not found." });
+      }
+      return reply
+        .header("content-type", "image/webp")
+        .header("content-length", info.size)
+        .header("cache-control", "public, max-age=31536000, immutable")
+        .send(createReadStream(file));
+    },
+  );
+
+  // --- Protected previews (watermark / black & white as the store chose) ---
+  app.get(
+    "/public/media/:assetId/s/:style",
+    { config: { rateLimit: routeRateLimit(1200, "1 minute") } },
+    async (request, reply) => {
+      const params = styledMediaParamsSchema.safeParse(request.params);
+      const file = params.success
+        ? await resolveStyledMedia(params.data.assetId, params.data.style.replace(/\.webp$/, ""))
+        : null;
+      const info = file ? await stat(file).catch(() => null) : null;
+      if (!file || !info) {
         throw new AppError({ statusCode: 404, code: "MEDIA_NOT_FOUND", message: "Not found." });
       }
       return reply

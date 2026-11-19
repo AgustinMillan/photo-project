@@ -34,6 +34,10 @@ export type StorefrontService = {
   coverPhotoId: string | null;
 };
 
+/** How previews are protected, separately for grid thumbnails and the full view. */
+export type ProtectionFlags = { watermark: boolean; grayscale: boolean; reveal: boolean };
+export type PhotoProtection = { grid: ProtectionFlags; full: ProtectionFlags };
+
 export type StorefrontContent = {
   displayName: string;
   tagline: string;
@@ -47,6 +51,7 @@ export type StorefrontContent = {
   watermarkText: string;
   sections: Array<{ key: StorefrontSectionKey; enabled: boolean }>;
   services: StorefrontService[];
+  protection?: PhotoProtection;
 };
 
 export const storeProfiles = pgTable("store_profiles", {

@@ -457,6 +457,55 @@ describe("catalog and media", () => {
     );
   });
 
+  it("protects previews as the store chose and never serves a weaker version", async () => {
+    const owner = await createOwner("protect@example.com", "protect-studio");
+    const photo = (
+      await upload(owner, await image("#cc3322", 2400, 1600), "?status=published")
+    ).json().photo;
+    await saveAndPublish(owner);
+    const host = "protect-studio.localhost";
+    const storefront = (await publicGet(host, "/api/v1/public/storefront")).json();
+    const listed = storefront.photos[0];
+    expect(storefront.content.protection).toMatchObject({
+      grid: { watermark: true, grayscale: false, reveal: false },
+    });
+    expect(listed.thumbUrl).toMatch(/\/s\/g-w-[0-9a-f]{8}\.webp$/);
+    expect(listed.previewUrl).toMatch(/\/s\/f-w-[0-9a-f]{8}\.webp$/);
+
+    const grid = await app.inject({ method: "GET", url: listed.thumbUrl });
+    expect(grid.statusCode).toBe(200);
+    expect((await sharp(grid.rawPayload).metadata()).width).toBe(640);
+    const full = await app.inject({ method: "GET", url: listed.previewUrl });
+    expect((await sharp(full.rawPayload).metadata()).width).toBe(1600);
+
+    // Asking for an unprotected version, or the clean thumbnail without signature, fails.
+    const assetId = listed.thumbUrl.split("/")[5];
+    const weaker = listed.thumbUrl.replace(/g-w-/, "g-n-");
+    expect((await app.inject({ method: "GET", url: weaker })).statusCode).toBe(404);
+    const unsigned = `/api/v1/public/media/${assetId}/thumb.webp`;
+    expect((await app.inject({ method: "GET", url: unsigned })).statusCode).toBe(404);
+    expect((await app.inject({ method: "GET", url: photo.thumbUrl })).statusCode).toBe(200);
+
+    // Black & white thumbnails, watermark + reveal in the full view.
+    await saveAndPublish(owner, {
+      protection: {
+        grid: { watermark: false, grayscale: true, reveal: false },
+        full: { watermark: true, grayscale: false, reveal: true },
+      },
+    });
+    const updated = (await publicGet(host, "/api/v1/public/storefront")).json();
+    expect(updated.content.protection.full.reveal).toBe(true);
+    const bw = updated.photos[0].thumbUrl as string;
+    expect(bw).toMatch(/\/s\/g-g-[0-9a-f]{8}\.webp$/);
+    const bwImage = await app.inject({ method: "GET", url: bw });
+    const { channels } = await sharp(bwImage.rawPayload).stats();
+    const [red, green, blue] = channels;
+    expect(Math.abs((red?.mean ?? 0) - (green?.mean ?? 0))).toBeLessThan(1);
+    expect(Math.abs((green?.mean ?? 0) - (blue?.mean ?? 0))).toBeLessThan(1);
+    // The previous settings are no longer served.
+    expect((await app.inject({ method: "GET", url: listed.thumbUrl })).statusCode).toBe(404);
+  });
+
   it("removes a photo from the store, keeps it for buyers and can restore it", async () => {
     const owner = await createOwner("remove@example.com", "remove-studio");
     const cover = (await upload(owner, await image("#334455"), "?status=published")).json().photo;
@@ -552,7 +601,7 @@ describe("orders, manual payments and downloads", () => {
       headers: auth(owner.token),
     });
     expect(panelAlbums.json().albums[0]).toMatchObject({ photoCount: 2, publishedCount: 2 });
-    expect(panelAlbums.json().albums[0].coverUrl).toMatch(/thumb\.webp$/);
+    expect(panelAlbums.json().albums[0].coverUrl).toMatch(/thumb\.webp\?sig=/);
     const response = await checkout(owner.host, [
       { type: "album", id: album.id },
       { type: "photo", id: photoA },

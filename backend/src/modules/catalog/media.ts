@@ -1,8 +1,9 @@
 import { createHash, randomUUID } from "node:crypto";
-import { access, mkdir, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
 import { env } from "../../config/env.js";
+import type { PhotoProtection, ProtectionFlags } from "../../db/schema/index.js";
 import { AppError } from "../../shared/errors/app-error.js";
 
 /**
@@ -188,4 +189,99 @@ export async function ensureCoverVariant(assetId: string, originalKey: string): 
 export async function discardProcessedImage(image: ProcessedImage): Promise<void> {
   await rm(originalPath(image.originalKey), { force: true });
   await rm(path.dirname(derivedPath(image.assetId, "thumb")), { recursive: true, force: true });
+}
+
+// --- Protected previews ------------------------------------------------------
+// Each store chooses how previews are protected (watermark, black & white, and a
+// blur the visitor reveals with the pointer), separately for grid thumbnails and
+// the full view. Watermark and grayscale are burned in here, from the original,
+// so they cannot be removed in the browser. Renditions are created on first use
+// and kept; the key changes when the settings or the watermark text change.
+
+export type StyleContext = "grid" | "full";
+
+export const DEFAULT_PROTECTION: PhotoProtection = {
+  grid: { watermark: true, grayscale: false, reveal: false },
+  full: { watermark: true, grayscale: false, reveal: false },
+};
+
+const STYLE_SIZE: Record<StyleContext, number> = { grid: 640, full: 1600 };
+const STYLE_PATTERN = /^([gf])-(w|g|wg|n)-([0-9a-f]{8})$/;
+
+export function styleKey(
+  context: StyleContext,
+  flags: ProtectionFlags,
+  watermarkText: string,
+): string {
+  const parts = `${flags.watermark ? "w" : ""}${flags.grayscale ? "g" : ""}` || "n";
+  const textHash = createHash("sha256")
+    .update(flags.watermark ? watermarkText.trim() || "Vista previa" : "")
+    .digest("hex")
+    .slice(0, 8);
+  return `${context === "grid" ? "g" : "f"}-${parts}-${textHash}`;
+}
+
+export function parseStyleKey(
+  key: string,
+): { context: StyleContext; watermark: boolean; grayscale: boolean } | null {
+  const match = STYLE_PATTERN.exec(key);
+  if (!match) return null;
+  return {
+    context: match[1] === "g" ? "grid" : "full",
+    watermark: match[2]?.includes("w") ?? false,
+    grayscale: match[2]?.includes("g") ?? false,
+  };
+}
+
+export function styledPath(assetId: string, key: string): string {
+  return path.join(mediaRoot(), "derived", assetId, `s-${key}.webp`);
+}
+
+const rendering = new Map<string, Promise<string>>();
+
+/** Renders (once) the protected rendition `key` of an asset and returns its path. */
+export async function ensureStyledVariant(
+  assetId: string,
+  originalKey: string,
+  key: string,
+  watermarkText: string,
+): Promise<string> {
+  const target = styledPath(assetId, key);
+  try {
+    await access(target);
+    return target;
+  } catch {
+    // Not rendered yet.
+  }
+  const pending = rendering.get(target);
+  if (pending) return pending;
+
+  const style = parseStyleKey(key);
+  if (!style) throw new Error(`Invalid style key ${key}`);
+  const job = (async () => {
+    const size = STYLE_SIZE[style.context];
+    let image = sharp(originalPath(originalKey), { limitInputPixels: MAX_INPUT_PIXELS })
+      .rotate()
+      .resize(size, size, { fit: "inside", withoutEnlargement: true });
+    if (style.grayscale) image = image.grayscale();
+    const resized = await image.toBuffer({ resolveWithObject: true });
+    let output = sharp(resized.data);
+    if (style.watermark) {
+      output = output.composite([
+        {
+          input: watermarkSvg(resized.info.width, resized.info.height, watermarkText),
+          top: 0,
+          left: 0,
+        },
+      ]);
+    }
+    const buffer = await output.webp({ quality: style.context === "grid" ? 76 : 80 }).toBuffer();
+    await mkdir(path.dirname(target), { recursive: true });
+    const temporary = `${target}.${randomUUID()}.tmp`;
+    await writeFile(temporary, buffer, { mode: 0o640 });
+    await rename(temporary, target);
+    return target;
+  })().finally(() => rendering.delete(target));
+  rendering.set(target, job);
+  return job;
 }

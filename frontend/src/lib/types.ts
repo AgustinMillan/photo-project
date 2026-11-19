@@ -215,6 +215,9 @@ export type StorefrontService = {
   coverPhotoId: string | null;
 };
 
+export type ProtectionFlags = { watermark: boolean; grayscale: boolean; reveal: boolean };
+export type PhotoProtection = { grid: ProtectionFlags; full: ProtectionFlags };
+
 export type StorefrontContent = {
   displayName: string;
   tagline: string;
@@ -228,6 +231,7 @@ export type StorefrontContent = {
   watermarkText: string;
   sections: Array<{ key: SectionKey; enabled: boolean }>;
   services: StorefrontService[];
+  protection?: PhotoProtection;
 };
 
 export type StorefrontAdmin = {
@@ -352,6 +356,7 @@ export type PublicAlbum = {
   album: { id: string; title: string; description: string; priceCents: number | null };
   photos: PublicPhoto[];
   purchasesEnabled: boolean;
+  protection?: PhotoProtection;
 };
 
 export type CreatedOrder = {
