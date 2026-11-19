@@ -1,4 +1,5 @@
 import { and, asc, eq, isNull } from "drizzle-orm";
+import { env } from "../../config/env.js";
 import { db } from "../../db/client.js";
 import {
   accounts,
@@ -29,6 +30,8 @@ export type PlanView = {
   description: string | null;
   status: Plan["status"];
   sortOrder: number;
+  priceCents: number | null;
+  currency: string;
 };
 
 export type EntitlementView = {
@@ -57,6 +60,13 @@ export type SubscriptionView = {
   createdAt: Date;
   updatedAt: Date;
   entitlements: EntitlementView[];
+  autoPayment: {
+    provider: "mercadopago";
+    status: string;
+    payerEmail: string | null;
+    nextPaymentAt: Date | null;
+    planCode: string | null;
+  } | null;
 };
 
 export type StoreSalesDisabledReason =
@@ -80,6 +90,8 @@ function toPlanView(plan: Plan): PlanView {
     description: plan.description,
     status: plan.status,
     sortOrder: plan.sortOrder,
+    priceCents: plan.priceCents,
+    currency: plan.currency,
   };
 }
 
@@ -96,6 +108,7 @@ function toSubscriptionView(
   subscription: BillingSubscription,
   plan: Plan,
   entitlements: PlanEntitlement[],
+  mpPlanCode: string | null = null,
 ): SubscriptionView {
   return {
     id: subscription.id,
@@ -116,7 +129,26 @@ function toSubscriptionView(
     createdAt: subscription.createdAt,
     updatedAt: subscription.updatedAt,
     entitlements: entitlements.map(toEntitlementView),
+    autoPayment: subscription.mpPreapprovalId
+      ? {
+          provider: "mercadopago",
+          status: subscription.mpPreapprovalStatus ?? "pending",
+          payerEmail: subscription.mpPayerEmail,
+          nextPaymentAt: subscription.mpNextPaymentAt,
+          planCode: mpPlanCode,
+        }
+      : null,
   };
+}
+
+/**
+ * While an automatic charge is set up, a missed or late charge keeps access for
+ * a few days: Mercado Pago charges on the due date and retries failures.
+ */
+function graceMs(subscription: BillingSubscription): number {
+  const autoPay =
+    subscription.mpPreapprovalStatus === "authorized" && !subscription.cancelAtPeriodEnd;
+  return autoPay ? env.BILLING_GRACE_DAYS * 24 * 60 * 60 * 1000 : 0;
 }
 
 export async function expireSubscriptionIfNeeded(
@@ -127,11 +159,11 @@ export async function expireSubscriptionIfNeeded(
   const trialEnded =
     subscription.status === "trial" &&
     subscription.trialEndsAt !== null &&
-    subscription.trialEndsAt.getTime() <= now.getTime();
+    subscription.trialEndsAt.getTime() + graceMs(subscription) <= now.getTime();
   const periodEnded =
     subscription.status === "active" &&
     subscription.currentPeriodEnd !== null &&
-    subscription.currentPeriodEnd.getTime() <= now.getTime();
+    subscription.currentPeriodEnd.getTime() + graceMs(subscription) <= now.getTime();
 
   if (!trialEnded && !periodEnded) {
     return subscription;
@@ -201,7 +233,17 @@ async function readAccountSubscription(
     .where(eq(planEntitlements.planId, plan.id))
     .orderBy(asc(planEntitlements.featureKey));
 
-  return toSubscriptionView(effective, plan, entitlements);
+  let mpPlanCode: string | null = null;
+  if (effective.mpPlanId) {
+    const [mpPlan] = await tx
+      .select({ code: plans.code })
+      .from(plans)
+      .where(eq(plans.id, effective.mpPlanId))
+      .limit(1);
+    mpPlanCode = mpPlan?.code ?? null;
+  }
+
+  return toSubscriptionView(effective, plan, entitlements, mpPlanCode);
 }
 
 export async function getAccountSubscription(

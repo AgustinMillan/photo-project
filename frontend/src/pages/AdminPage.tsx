@@ -16,7 +16,7 @@ import { adminApi } from "../lib/endpoints.ts";
 import { errorMessage } from "../lib/errors.ts";
 import { formatDate } from "../lib/format.ts";
 import { formatMoney } from "../lib/money.ts";
-import type { AdminAccount, AdminAction } from "../lib/types.ts";
+import type { AdminAccount, AdminAction, AdminOverview } from "../lib/types.ts";
 import { useLoad } from "../lib/useLoad.ts";
 
 const STATUS: Record<
@@ -254,6 +254,33 @@ export function AdminPage() {
           <Spinner />
         ) : (
           <>
+            {overview.data ? (
+              <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <Stat
+                  label="Ingreso mensual recurrente"
+                  value={formatMoney(overview.data.revenue.mrrCents)}
+                  hint="Abonos con pago automático activo"
+                />
+                <Stat
+                  label={`Cobrado en abonos (${days} d)`}
+                  value={formatMoney(overview.data.revenue.collectedPeriodCents)}
+                  hint={`${overview.data.revenue.failedPaymentsPeriod} cobros rechazados`}
+                />
+                <Stat
+                  label="Cuentas pagando"
+                  value={overview.data.revenue.payingAccounts}
+                  hint={`${overview.data.revenue.trialsWithAutoPay} en prueba con pago automático`}
+                />
+                <Stat
+                  label={`Visitantes de la página (${days} d)`}
+                  value={overview.data.funnel.landingVisitors}
+                  hint="Únicos por día, sin cookies"
+                />
+              </section>
+            ) : null}
+
+            {overview.data ? <Funnel funnel={overview.data.funnel} days={days} /> : null}
+
             <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <Stat
                 label={`Ventas cobradas (${days} d)`}
@@ -306,6 +333,14 @@ export function AdminPage() {
                 <BarChart
                   title="Pedidos creados por día"
                   data={series.map((d) => ({ label: d.date, value: d.orders }))}
+                  formatValue={(v) => String(Math.round(v))}
+                  formatLabel={shortDay}
+                />
+              </Card>
+              <Card>
+                <BarChart
+                  title="Visitantes de la página de inicio por día"
+                  data={series.map((d) => ({ label: d.date, value: d.landingVisitors }))}
                   formatValue={(v) => String(Math.round(v))}
                   formatLabel={shortDay}
                 />
@@ -551,5 +586,53 @@ export function AdminPage() {
         </section>
       </main>
     </div>
+  );
+}
+
+const FUNNEL_STEPS: Array<{ key: keyof AdminOverview["funnel"]; label: string }> = [
+  { key: "landingVisitors", label: "Visitaron la página de inicio" },
+  { key: "signups", label: "Se registraron" },
+  { key: "withStore", label: "Crearon su tienda" },
+  { key: "withPhotos", label: "Subieron fotos" },
+  { key: "published", label: "Publicaron la tienda" },
+  { key: "withSale", label: "Hicieron su primera venta" },
+  { key: "withAutoPay", label: "Activaron el pago automático" },
+];
+
+function Funnel({ funnel, days }: { funnel: AdminOverview["funnel"]; days: number }) {
+  const max = Math.max(1, ...FUNNEL_STEPS.map((step) => funnel[step.key]));
+  return (
+    <Card title={`Embudo de los últimos ${days} días`}>
+      <p className="mb-4 text-xs text-fg-dim">
+        Desde la visita hasta el pago. Los pasos después del registro cuentan solo cuentas creadas
+        en el período.
+      </p>
+      <ol className="space-y-2">
+        {FUNNEL_STEPS.map((step, index) => {
+          const value = funnel[step.key];
+          const previous = index > 0 ? funnel[FUNNEL_STEPS[index - 1]?.key ?? step.key] : null;
+          const rate =
+            previous !== null && previous > 0 ? `${Math.round((value / previous) * 100)}%` : null;
+          return (
+            <li
+              key={step.key}
+              className="grid grid-cols-[12rem_1fr_5rem] items-center gap-3 text-sm"
+            >
+              <span className="text-fg-muted">{step.label}</span>
+              <span className="h-3 rounded-sm bg-raised">
+                <span
+                  className="block h-3 rounded-sm bg-accent"
+                  style={{ width: `${Math.max(value > 0 ? 2 : 0, (value / max) * 100)}%` }}
+                />
+              </span>
+              <span className="text-right text-fg">
+                {value}
+                {rate ? <span className="ml-1 text-xs text-fg-dim">{rate}</span> : null}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+    </Card>
   );
 }

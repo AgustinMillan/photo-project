@@ -43,6 +43,13 @@
       "when": 1794998938549,
       "tag": "0005_mercadopago",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1795052816154,
+      "tag": "0006_billing_mp_analytics",
+      "breakpoints": true
     }
   ]
 }

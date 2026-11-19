@@ -16,6 +16,7 @@ import { errorMessage } from "../lib/errors.ts";
 import { formatMoney } from "../lib/money.ts";
 import type { PublicPhoto, PublicStorefront } from "../lib/types.ts";
 import { useLoad } from "../lib/useLoad.ts";
+import { trackVisit } from "../lib/visit.ts";
 import { CartProvider, useCart } from "./cart.tsx";
 
 function Loading() {
@@ -751,6 +752,7 @@ function StorefrontRoutes() {
 }
 
 export function StorefrontApp() {
+  useEffect(() => trackVisit(), []);
   return (
     <BrowserRouter>
       <CartProvider>

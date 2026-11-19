@@ -37,6 +37,10 @@ export const SUBSCRIPTION_EVENT_TYPES = [
   "cancelled",
   "suspended",
   "reactivated",
+  "payment_received",
+  "payment_failed",
+  "reminder_sent",
+  "provider_linked",
 ] as const;
 export type SubscriptionEventType = (typeof SUBSCRIPTION_EVENT_TYPES)[number];
 
@@ -49,6 +53,9 @@ export const plans = pgTable(
     description: text("description"),
     status: text("status").$type<PlanStatus>().notNull().default("active"),
     sortOrder: integer("sort_order").notNull().default(0),
+    // Monthly price. Null means the plan is not sold publicly (e.g. pilots).
+    priceCents: bigint("price_cents", { mode: "number" }),
+    currency: text("currency").notNull().default("ARS"),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
   },
@@ -58,6 +65,7 @@ export const plans = pgTable(
     check("plans_status_check", sql`${table.status} in ('active', 'retired')`),
     check("plans_sort_order_check", sql`${table.sortOrder} >= 0`),
     check("plans_code_format_check", sql`${table.code} ~ '^[a-z0-9][a-z0-9-]*$'`),
+    check("plans_price_check", sql`${table.priceCents} is null or ${table.priceCents} > 0`),
   ],
 );
 
@@ -108,6 +116,13 @@ export const subscriptions = pgTable(
     // Pilot customers get every feature for free, with no expiry, until an
     // operator ends the pilot explicitly.
     isPilot: boolean("is_pilot").notNull().default(false),
+    // Recurring charge with Mercado Pago (preapproval). The provider plan is
+    // the plan that the preapproval charges for.
+    mpPreapprovalId: text("mp_preapproval_id"),
+    mpPreapprovalStatus: text("mp_preapproval_status"),
+    mpPayerEmail: text("mp_payer_email"),
+    mpPlanId: uuid("mp_plan_id").references(() => plans.id, { onDelete: "set null" }),
+    mpNextPaymentAt: timestamp("mp_next_payment_at", { withTimezone: true, mode: "date" }),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
   },
@@ -117,6 +132,7 @@ export const subscriptions = pgTable(
       .where(sql`${table.endedAt} is null`),
     index("subscriptions_account_status_idx").on(table.accountId, table.status),
     index("subscriptions_current_period_end_idx").on(table.currentPeriodEnd),
+    uniqueIndex("subscriptions_mp_preapproval_uq").on(table.mpPreapprovalId),
     check(
       "subscriptions_status_check",
       sql`${table.status} in ('trial', 'active', 'expired', 'cancelled', 'suspended')`,
@@ -153,7 +169,38 @@ export const subscriptionEvents = pgTable(
     index("subscription_events_type_created_idx").on(table.eventType, table.createdAt),
     check(
       "subscription_events_type_check",
-      sql`${table.eventType} in ('created', 'trial_started', 'activated', 'renewed', 'plan_changed', 'expired', 'cancelled', 'suspended', 'reactivated')`,
+      sql`${table.eventType} in ('created', 'trial_started', 'activated', 'renewed', 'plan_changed', 'expired', 'cancelled', 'suspended', 'reactivated', 'payment_received', 'payment_failed', 'reminder_sent', 'provider_linked')`,
     ),
+  ],
+);
+
+export const subscriptionPayments = pgTable(
+  "subscription_payments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    subscriptionId: uuid("subscription_id")
+      .notNull()
+      .references(() => subscriptions.id, { onDelete: "restrict" }),
+    planId: uuid("plan_id").references(() => plans.id, { onDelete: "set null" }),
+    provider: text("provider").notNull().default("mercadopago"),
+    // Mercado Pago authorized_payment id (one per monthly charge attempt).
+    providerChargeId: text("provider_charge_id").notNull(),
+    providerPaymentId: text("provider_payment_id"),
+    status: text("status").notNull(),
+    amountCents: bigint("amount_cents", { mode: "number" }).notNull(),
+    currency: text("currency").notNull().default("ARS"),
+    paidAt: timestamp("paid_at", { withTimezone: true, mode: "date" }),
+    periodStart: timestamp("period_start", { withTimezone: true, mode: "date" }),
+    periodEnd: timestamp("period_end", { withTimezone: true, mode: "date" }),
+    raw: jsonb("raw").$type<Record<string, unknown>>().notNull().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("subscription_payments_provider_charge_uq").on(
+      table.provider,
+      table.providerChargeId,
+    ),
+    index("subscription_payments_subscription_idx").on(table.subscriptionId, table.createdAt),
   ],
 );

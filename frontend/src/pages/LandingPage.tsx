@@ -1,9 +1,9 @@
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext.tsx";
+import { trackVisit } from "../lib/visit.ts";
 
 const SUPPORT_EMAIL = import.meta.env.VITE_SUPPORT_EMAIL || "";
-const MONTHLY_PRICE = "$15.000";
 
 const STEPS = [
   {
@@ -47,6 +47,34 @@ const FEATURES = [
   },
 ];
 
+const PLANS = [
+  {
+    name: "Base",
+    price: "$15.000",
+    highlight: false,
+    points: [
+      "Tu tienda con link propio",
+      "Galerías y fotos ilimitadas para vender",
+      "Cobro con Mercado Pago y transferencia",
+      "Entrega automática en alta resolución",
+      "Sección de servicios con consultas por WhatsApp",
+      "Sin comisión de la plataforma por venta",
+    ],
+  },
+  {
+    name: "Profesional",
+    price: "$20.000",
+    highlight: true,
+    points: [
+      "Todo lo del plan Base",
+      "Visitas, ventas e ingresos por día",
+      "Tus fotos y galerías más vendidas",
+      "Conversión de visitas a ventas",
+      "Comparación con el mes anterior",
+    ],
+  },
+];
+
 const FAQ = [
   {
     q: "¿Necesito saber de diseño o programación?",
@@ -58,7 +86,7 @@ const FAQ = [
   },
   {
     q: "¿Cómo funciona la prueba gratis?",
-    a: "Tenés 30 días con todo habilitado y sin cargar tarjeta. Si te sirve, después seguís con el plan mensual.",
+    a: "Tenés 30 días con todo habilitado (incluidas las estadísticas) y sin cargar tarjeta. Si te sirve, elegís Base o Profesional y el abono se cobra solo cada mes con Mercado Pago.",
   },
   {
     q: "¿Mis fotos están seguras?",
@@ -113,6 +141,8 @@ function MockStorefront() {
 
 export function LandingPage() {
   const { user } = useAuth();
+
+  useEffect(() => trackVisit(), []);
 
   useEffect(() => {
     document.title = "Galeriza · Tu tienda de fotos con cobro y entrega automática";
@@ -218,31 +248,54 @@ export function LandingPage() {
 
         <section id="precio" className="border-y border-line/60 bg-surface/40">
           <div className="mx-auto max-w-6xl px-5 py-16">
-            <h2 className="font-display text-3xl">Un precio simple</h2>
-            <div className="mt-8 max-w-md rounded-2xl border border-accent/50 bg-surface p-8">
-              <p className="font-mono text-xs uppercase tracking-[0.3em] text-accent">Plan Base</p>
-              <p className="mt-3 font-display text-5xl">
-                {MONTHLY_PRICE}
-                <span className="font-sans text-base text-fg-muted"> / mes</span>
-              </p>
-              <ul className="mt-6 space-y-2 text-sm text-fg-muted">
-                <li>✓ Tu tienda con link propio</li>
-                <li>✓ Galerías y fotos ilimitadas para vender</li>
-                <li>✓ Cobro con Mercado Pago y transferencia</li>
-                <li>✓ Entrega automática en alta resolución</li>
-                <li>✓ Sección de servicios con consultas por WhatsApp</li>
-                <li>✓ Sin comisión de la plataforma por venta</li>
-              </ul>
-              <Link
-                to="/register"
-                className="mt-8 block rounded-ui bg-accent px-6 py-3 text-center font-medium text-void hover:bg-accent-soft"
-              >
-                Empezar 30 días gratis
-              </Link>
-              <p className="mt-3 text-center text-xs text-fg-dim">
-                ¿Tenés un estudio con equipo? Hay planes con más tiendas y colaboradores.
-              </p>
+            <h2 className="font-display text-3xl">Precios simples, sin comisión por venta</h2>
+            <p className="mt-2 text-fg-muted">
+              30 días gratis con todo incluido. Después elegís tu plan.
+            </p>
+            <div className="mt-8 grid gap-6 md:grid-cols-2">
+              {PLANS.map((plan) => (
+                <div
+                  key={plan.name}
+                  className={`flex flex-col rounded-2xl border bg-surface p-8 ${
+                    plan.highlight ? "border-accent/60" : "border-line"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-mono text-xs uppercase tracking-[0.3em] text-accent">
+                      Plan {plan.name}
+                    </p>
+                    {plan.highlight ? (
+                      <span className="rounded border border-accent/50 px-2 py-0.5 font-mono text-[10px] text-accent-soft">
+                        CON ESTADÍSTICAS
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="mt-3 font-display text-5xl">
+                    {plan.price}
+                    <span className="font-sans text-base text-fg-muted"> / mes</span>
+                  </p>
+                  <ul className="mt-6 flex-1 space-y-2 text-sm text-fg-muted">
+                    {plan.points.map((point) => (
+                      <li key={point}>✓ {point}</li>
+                    ))}
+                  </ul>
+                  <Link
+                    to="/register"
+                    className={`mt-8 block rounded-ui px-6 py-3 text-center font-medium ${
+                      plan.highlight
+                        ? "bg-accent text-void hover:bg-accent-soft"
+                        : "border border-line text-fg hover:border-accent"
+                    }`}
+                  >
+                    Empezar 30 días gratis
+                  </Link>
+                </div>
+              ))}
             </div>
+            <p className="mt-4 text-xs text-fg-dim">
+              El abono se paga con Mercado Pago y se renueva solo cada mes. Podés cancelarlo cuando
+              quieras.
+            </p>
           </div>
         </section>
 

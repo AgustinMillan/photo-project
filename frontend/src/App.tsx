@@ -17,6 +17,7 @@ import { PaymentsPage } from "./pages/PaymentsPage.tsx";
 import { RegisterPage } from "./pages/RegisterPage.tsx";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage.tsx";
 import { SettingsPage } from "./pages/SettingsPage.tsx";
+import { StatsPage } from "./pages/StatsPage.tsx";
 import { StorefrontEditorPage } from "./pages/StorefrontEditorPage.tsx";
 import { SubscriptionPage } from "./pages/SubscriptionPage.tsx";
 import { TeamPage } from "./pages/TeamPage.tsx";
@@ -65,6 +66,7 @@ export function App() {
                   <Route path="orders" element={<OrdersPage />} />
                   <Route path="payments" element={<PaymentsPage />} />
                   <Route path="team" element={<TeamPage />} />
+                  <Route path="stats" element={<StatsPage />} />
                   <Route path="subscription" element={<SubscriptionPage />} />
                   <Route path="settings" element={<SettingsPage />} />
                 </Route>

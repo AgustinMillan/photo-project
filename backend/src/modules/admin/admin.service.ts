@@ -95,8 +95,77 @@ export async function getOverview(days: number) {
     order by day.d
   `);
 
+  // Funnel for accounts created in the period (cohort), plus landing visitors.
+  const [funnel] = await db.execute<Row>(sql`
+    with cohort as (
+      select u.id as user_id, a.id as account_id
+      from users u
+      left join accounts a on a.owner_user_id = u.id and a.deleted_at is null
+      where u.status <> 'deleted' and u.created_at >= now() - make_interval(days => ${days})
+    ), cohort_stores as (
+      select st.id from stores st join cohort c on c.account_id = st.account_id where st.deleted_at is null
+    )
+    select
+      (select count(*) from page_visits
+        where scope = 'landing'
+          and day > (now() at time zone 'America/Argentina/Buenos_Aires')::date - ${days}::int) as landing_visitors,
+      (select count(*) from cohort) as signups,
+      (select count(distinct st.account_id) from stores st join cohort c on c.account_id = st.account_id where st.deleted_at is null) as with_store,
+      (select count(*) from stores st where st.id in (select id from cohort_stores) and st.publication_status = 'published') as published,
+      (select count(distinct ph.store_id) from photos ph where ph.store_id in (select id from cohort_stores)) as with_photos,
+      (select count(distinct o.store_id) from orders o where o.status = 'paid' and o.store_id in (select id from cohort_stores)) as with_sale,
+      (select count(distinct s.account_id) from subscriptions s join cohort c on c.account_id = s.account_id
+        where s.ended_at is null and s.mp_preapproval_status = 'authorized') as with_autopay
+  `);
+
+  const [revenue] = await db.execute<Row>(sql`
+    select
+      (select coalesce(sum(coalesce(mp.price_cents, p.price_cents)), 0)
+         from subscriptions s
+         join plans p on p.id = s.plan_id
+         left join plans mp on mp.id = s.mp_plan_id
+        where s.ended_at is null and not s.is_pilot and s.mp_preapproval_status = 'authorized'
+          and not s.cancel_at_period_end) as mrr_cents,
+      (select count(*) from subscriptions s
+        where s.ended_at is null and not s.is_pilot and s.status = 'active'
+          and s.current_period_end > now()) as paying_accounts,
+      (select count(*) from subscriptions s
+        where s.ended_at is null and not s.is_pilot and s.status = 'trial'
+          and s.mp_preapproval_status = 'authorized') as trials_with_autopay,
+      (select coalesce(sum(amount_cents), 0) from subscription_payments
+        where status = 'approved' and paid_at >= now() - make_interval(days => ${days})) as collected_period_cents,
+      (select count(*) from subscription_payments
+        where status in ('rejected', 'cancelled') and created_at >= now() - make_interval(days => ${days})) as failed_period
+  `);
+
+  const landingSeries = await db.execute<Row>(sql`
+    select day::text as date, count(*) as visitors from page_visits
+    where scope = 'landing'
+      and day > (now() at time zone 'America/Argentina/Buenos_Aires')::date - ${days}::int
+    group by day
+  `);
+  const landingByDay = new Map(landingSeries.map((row) => [String(row.date), num(row.visitors)]));
+
   const t = totals ?? {};
+  const f = funnel ?? {};
+  const r = revenue ?? {};
   return {
+    funnel: {
+      landingVisitors: num(f.landing_visitors),
+      signups: num(f.signups),
+      withStore: num(f.with_store),
+      published: num(f.published),
+      withPhotos: num(f.with_photos),
+      withSale: num(f.with_sale),
+      withAutoPay: num(f.with_autopay),
+    },
+    revenue: {
+      mrrCents: num(r.mrr_cents),
+      payingAccounts: num(r.paying_accounts),
+      trialsWithAutoPay: num(r.trials_with_autopay),
+      collectedPeriodCents: num(r.collected_period_cents),
+      failedPaymentsPeriod: num(r.failed_period),
+    },
     days,
     totals: {
       users: num(t.users),
@@ -129,6 +198,7 @@ export async function getOverview(days: number) {
       orders: num(row.orders),
       paidOrders: num(row.paid_orders),
       gmvCents: num(row.gmv_cents),
+      landingVisitors: landingByDay.get(String(row.date)) ?? 0,
     })),
   };
 }

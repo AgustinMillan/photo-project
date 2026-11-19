@@ -142,6 +142,101 @@ export async function searchPaymentsByReference(sellerToken: string, externalRef
   return result.results ?? [];
 }
 
+// --- Platform subscriptions (preapproval), charged to the app owner's account ---
+
+export type MpPreapproval = {
+  id: string;
+  status: string; // pending | authorized | paused | cancelled
+  init_point?: string;
+  external_reference?: string | null;
+  payer_email?: string | null;
+  reason?: string;
+  next_payment_date?: string | null;
+  auto_recurring?: { transaction_amount?: number; currency_id?: string; start_date?: string };
+};
+
+export type MpAuthorizedPayment = {
+  id: number | string;
+  preapproval_id: string;
+  status: string; // scheduled | processed | recycling | cancelled
+  transaction_amount: number;
+  currency_id: string;
+  date_created?: string;
+  debit_date?: string | null;
+  last_modified?: string;
+  payment?: { id?: number | string; status?: string; status_detail?: string } | null;
+};
+
+let platformToken: { value: string; expiresAt: number } | null = null;
+
+/** Access token of the account that owns the app, via client credentials. */
+export async function platformAccessToken(): Promise<string> {
+  if (env.MP_PLATFORM_ACCESS_TOKEN) return env.MP_PLATFORM_ACCESS_TOKEN;
+  if (platformToken && platformToken.expiresAt > Date.now() + 60_000) return platformToken.value;
+  const token = await request<MpTokenResponse>("POST", "/oauth/token", {
+    body: {
+      client_id: env.MP_CLIENT_ID,
+      client_secret: env.MP_CLIENT_SECRET,
+      grant_type: "client_credentials",
+    },
+  });
+  platformToken = {
+    value: token.access_token,
+    expiresAt: Date.now() + (token.expires_in ?? 3600) * 1000,
+  };
+  return token.access_token;
+}
+
+export function resetPlatformTokenCache(): void {
+  platformToken = null;
+}
+
+export async function createPreapproval(body: Record<string, unknown>) {
+  return request<MpPreapproval>("POST", "/preapproval", {
+    token: await platformAccessToken(),
+    body,
+  });
+}
+
+export async function getPreapproval(id: string) {
+  return request<MpPreapproval>("GET", `/preapproval/${encodeURIComponent(id)}`, {
+    token: await platformAccessToken(),
+  });
+}
+
+export async function updatePreapproval(id: string, body: Record<string, unknown>) {
+  return request<MpPreapproval>("PUT", `/preapproval/${encodeURIComponent(id)}`, {
+    token: await platformAccessToken(),
+    body,
+  });
+}
+
+export async function searchPreapprovals(externalReference: string) {
+  const query = new URLSearchParams({ external_reference: externalReference, limit: "20" });
+  const result = await request<{ results?: MpPreapproval[] }>(
+    "GET",
+    `/preapproval/search?${query}`,
+    { token: await platformAccessToken() },
+  );
+  return result.results ?? [];
+}
+
+export async function getAuthorizedPayment(id: string) {
+  return request<MpAuthorizedPayment>("GET", `/authorized_payments/${encodeURIComponent(id)}`, {
+    token: await platformAccessToken(),
+  });
+}
+
+export async function searchAuthorizedPayments(preapprovalId: string) {
+  const query = new URLSearchParams({ preapproval_id: preapprovalId, limit: "50" });
+  const result = await request<{ results?: MpAuthorizedPayment[] }>(
+    "GET",
+    `/authorized_payments/search?${query}`,
+    { token: await platformAccessToken() },
+  );
+  return result.results ?? [];
+}
+
 /**
  * Validates the `x-signature` header of a webhook: HMAC-SHA256 (hex) of
  * "id:<data.id>;request-id:<x-request-id>;ts:<ts>;" with the app's webhook
