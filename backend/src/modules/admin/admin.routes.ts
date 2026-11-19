@@ -14,6 +14,7 @@ import {
 } from "../billing/billing.admin.js";
 import {
   assertPlatformAdmin,
+  getAttribution,
   getOverview,
   isPlatformAdmin,
   listAccounts,
@@ -60,6 +61,12 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     await adminUser(request);
     const { days } = overviewQuerySchema.parse(request.query);
     return { ...(await getOverview(days)), recentOrders: await recentOrders(15) };
+  });
+
+  app.get("/admin/attribution", { preHandler: authenticate }, async (request) => {
+    await adminUser(request);
+    const { days } = overviewQuerySchema.parse(request.query);
+    return { days, rows: await getAttribution(days) };
   });
 
   app.get("/admin/accounts", { preHandler: authenticate }, async (request) => {

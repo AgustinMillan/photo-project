@@ -15,6 +15,16 @@ const RANGES = [
   { days: 90, label: "90 días" },
 ];
 
+const SOURCE_LABELS: Record<string, string> = {
+  "": "Directo o WhatsApp",
+  instagram: "Instagram",
+  facebook: "Facebook",
+  google: "Google",
+  whatsapp: "WhatsApp",
+  tiktok: "TikTok",
+  x: "X (Twitter)",
+};
+
 const METHOD_LABELS: Record<string, string> = {
   mercadopago: "Mercado Pago",
   transfer: "Transferencia",
@@ -209,6 +219,41 @@ export function StatsPage() {
               ) : null}
             </Card>
           </div>
+
+          {stats.sources.length > 0 ? (
+            <Card title="De dónde vienen tus visitas">
+              <ul className="space-y-2">
+                {stats.sources.map((item) => {
+                  const share = stats.totals.visitors
+                    ? Math.round((item.visitors / stats.totals.visitors) * 100)
+                    : 0;
+                  return (
+                    <li
+                      key={item.source || "direct"}
+                      className="grid grid-cols-[10rem_1fr_4rem] items-center gap-3 text-sm"
+                    >
+                      <span className="truncate text-fg-muted">
+                        {SOURCE_LABELS[item.source] ?? item.source}
+                      </span>
+                      <span className="h-2.5 rounded-sm bg-raised">
+                        <span
+                          className="block h-2.5 rounded-sm bg-accent"
+                          style={{ width: `${Math.max(2, share)}%` }}
+                        />
+                      </span>
+                      <span className="text-right text-fg">
+                        {item.visitors}
+                        <span className="ml-1 text-xs text-fg-dim">{share}%</span>
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+              <p className="mt-3 text-xs text-fg-dim">
+                Los links abiertos desde WhatsApp o escritos a mano aparecen como "Directo".
+              </p>
+            </Card>
+          ) : null}
 
           <p className="text-xs text-fg-dim">
             Las visitas se cuentan sin cookies y sin guardar datos personales: cada visitante se

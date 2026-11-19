@@ -7,6 +7,7 @@ import type {
   AdminOverview,
   Album,
   AssignableRole,
+  AttributionRow,
   AuthResponse,
   AuthUser,
   CatalogStatus,
@@ -33,10 +34,15 @@ import type {
   Subscription,
   SubscriptionPayment,
 } from "./types.ts";
+import type { VisitAttribution } from "./visit.ts";
 
 export const authApi = {
-  register: (body: { email: string; password: string; displayName?: string }) =>
-    api.post<{ message: string; user: AuthUser }>("/auth/register", body, { auth: false }),
+  register: (body: {
+    email: string;
+    password: string;
+    displayName?: string;
+    attribution?: VisitAttribution;
+  }) => api.post<{ message: string; user: AuthUser }>("/auth/register", body, { auth: false }),
   verifyEmail: (token: string) =>
     api.post<{ message: string }>("/auth/verify-email", { token }, { auth: false }),
   resendVerification: (email: string) =>
@@ -237,5 +243,7 @@ export const adminApi = {
   me: () => api.get<{ admin: boolean }>("/admin/me"),
   overview: (days: number) => api.get<AdminOverview>(`/admin/overview?days=${days}`),
   accounts: () => api.get<{ accounts: AdminAccount[] }>("/admin/accounts"),
+  attribution: (days: number) =>
+    api.get<{ days: number; rows: AttributionRow[] }>(`/admin/attribution?days=${days}`),
   action: (body: AdminAction) => api.post<{ ok: boolean }>("/admin/actions", body),
 };

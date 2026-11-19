@@ -269,3 +269,57 @@ export async function recentOrders(limit = 20) {
     storeSlug: String(row.store_slug),
   }));
 }
+
+/**
+ * Landing visitors and sign-ups grouped by where they came from, with how far
+ * each cohort got. Sign-up steps count users created in the period.
+ */
+export async function getAttribution(days: number) {
+  const rows = await db.execute<Row>(sql`
+    with visits as (
+      select source, campaign, content, count(*) as visitors
+      from page_visits
+      where scope = 'landing'
+        and day > (now() at time zone 'America/Argentina/Buenos_Aires')::date - ${days}::int
+      group by 1, 2, 3
+    ), signups as (
+      select coalesce(ua.source, '') as source, coalesce(ua.campaign, '') as campaign,
+             coalesce(ua.content, '') as content, u.id as user_id, a.id as account_id
+      from users u
+      left join user_attribution ua on ua.user_id = u.id
+      left join accounts a on a.owner_user_id = u.id and a.deleted_at is null
+      where u.status <> 'deleted' and u.created_at >= now() - make_interval(days => ${days})
+    ), progress as (
+      select s.source, s.campaign, s.content,
+        count(*) as signups,
+        count(*) filter (where exists (select 1 from stores st where st.account_id = s.account_id and st.deleted_at is null)) as with_store,
+        count(*) filter (where exists (select 1 from stores st where st.account_id = s.account_id and st.deleted_at is null and st.publication_status = 'published')) as published,
+        count(*) filter (where exists (select 1 from stores st join orders o on o.store_id = st.id where st.account_id = s.account_id and o.status = 'paid')) as with_sale,
+        count(*) filter (where exists (select 1 from subscriptions sb where sb.account_id = s.account_id and sb.ended_at is null and sb.mp_preapproval_status = 'authorized')) as with_autopay
+      from signups s
+      group by 1, 2, 3
+    )
+    select coalesce(v.source, p.source) as source, coalesce(v.campaign, p.campaign) as campaign,
+           coalesce(v.content, p.content) as content,
+           coalesce(v.visitors, 0) as visitors, coalesce(p.signups, 0) as signups,
+           coalesce(p.with_store, 0) as with_store, coalesce(p.published, 0) as published,
+           coalesce(p.with_sale, 0) as with_sale, coalesce(p.with_autopay, 0) as with_autopay
+    from visits v
+    full outer join progress p
+      on p.source = v.source and p.campaign = v.campaign and p.content = v.content
+    order by signups desc, visitors desc
+    limit 100
+  `);
+
+  return rows.map((row) => ({
+    source: String(row.source ?? ""),
+    campaign: String(row.campaign ?? ""),
+    content: String(row.content ?? ""),
+    visitors: num(row.visitors),
+    signups: num(row.signups),
+    withStore: num(row.with_store),
+    published: num(row.published),
+    withSale: num(row.with_sale),
+    withAutoPay: num(row.with_autopay),
+  }));
+}

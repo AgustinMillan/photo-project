@@ -6,6 +6,7 @@ import {
   emailVerificationTokens,
   passwordResetTokens,
   type UserStatus,
+  userAttribution,
   userSessions,
   users,
 } from "../../db/schema/index.js";
@@ -14,6 +15,7 @@ import { generateOpaqueToken, hashToken } from "../../shared/auth/tokens.js";
 import { isUniqueViolation } from "../../shared/db/errors.js";
 import { AppError } from "../../shared/errors/app-error.js";
 import { logger } from "../../shared/logger.js";
+import { platformHost, resolveAttribution } from "../analytics/attribution.js";
 import { recordAuditEvent } from "../audit/audit.service.js";
 import { sendPasswordResetEmail, sendVerificationEmail } from "./auth.email.js";
 import type { LoginInput, RegisterInput } from "./auth.schemas.js";
@@ -178,6 +180,13 @@ export async function registerUser(input: RegisterInput): Promise<RegisterResult
         email,
         tokenHash: verificationTokenHash,
         expiresAt: verificationExpiresAt,
+      });
+
+      const origin = resolveAttribution(input.attribution ?? {}, [platformHost()]);
+      await tx.insert(userAttribution).values({
+        userId: user.id,
+        ...origin,
+        landingPath: (input.attribution?.path ?? "").slice(0, 200),
       });
 
       return user;

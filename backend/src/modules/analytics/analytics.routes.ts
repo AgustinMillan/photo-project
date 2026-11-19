@@ -8,6 +8,7 @@ import { assertFeatureEnabled } from "../billing/billing.service.js";
 import { requireStoreAccess } from "../stores/store-access.js";
 import { storeParamsSchema } from "../stores/stores.schemas.js";
 import { getStoreStats, recordVisit } from "./analytics.service.js";
+import { attributionInputSchema } from "./attribution.js";
 
 const statsQuerySchema = z.object({
   days: z.coerce
@@ -23,10 +24,12 @@ export const analyticsRoutes: FastifyPluginAsync = async (app) => {
     "/public/visit",
     { config: { rateLimit: routeRateLimit(120, "1 minute") } },
     async (request, reply) => {
+      const parsed = attributionInputSchema.safeParse(request.body ?? {});
       await recordVisit({
         hostname: request.hostname,
         ip: request.ip,
         userAgent: request.headers["user-agent"],
+        attribution: parsed.success ? parsed.data : {},
       }).catch((error) => request.log.warn({ err: error }, "Visit not recorded"));
       return reply.status(204).send();
     },

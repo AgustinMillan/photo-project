@@ -5,6 +5,7 @@ import { Alert, Button, Field } from "../components/ui.tsx";
 import { authApi } from "../lib/endpoints.ts";
 import { errorMessage } from "../lib/errors.ts";
 import { validateEmail, validatePassword } from "../lib/validation.ts";
+import { visitAttribution } from "../lib/visit.ts";
 
 export function RegisterPage() {
   const [displayName, setDisplayName] = useState("");
@@ -30,6 +31,7 @@ export function RegisterPage() {
         email: email.trim(),
         password,
         ...(name ? { displayName: name } : {}),
+        attribution: visitAttribution(),
       });
       setDone(true);
     } catch (caught) {

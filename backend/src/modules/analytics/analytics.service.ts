@@ -6,6 +6,7 @@ import { pageVisits } from "../../db/schema/index.js";
 import { mediaUrl } from "../storefront/storefront.service.js";
 import { normalizeHostname } from "../stores/stores.constants.js";
 import { resolveStoreByHostname } from "../stores/stores.service.js";
+import { type AttributionInput, platformHost, resolveAttribution } from "./attribution.js";
 
 const TIME_ZONE = "America/Argentina/Buenos_Aires";
 const BOT_PATTERN =
@@ -39,15 +40,18 @@ export async function recordVisit(input: {
   hostname: string;
   ip: string;
   userAgent: string | undefined;
+  attribution?: AttributionInput;
 }): Promise<boolean> {
   const userAgent = input.userAgent ?? "";
   if (!userAgent || BOT_PATTERN.test(userAgent)) return false;
   const scope = await resolveVisitScope(input.hostname);
   if (!scope) return false;
   const day = localDay();
+  const origin = resolveAttribution(input.attribution ?? {}, [platformHost()]);
+  // The first view of the day sets the source; later views only add up.
   await db
     .insert(pageVisits)
-    .values({ day, scope, visitorHash: visitorHash(day, input.ip, userAgent), views: 1 })
+    .values({ day, scope, visitorHash: visitorHash(day, input.ip, userAgent), views: 1, ...origin })
     .onConflictDoUpdate({
       target: [pageVisits.day, pageVisits.scope, pageVisits.visitorHash],
       set: { views: sql`${pageVisits.views} + 1` },
@@ -87,6 +91,7 @@ export type StoreStats = {
   }[];
   topAlbums: { id: string; title: string; sales: number; revenueCents: number }[];
   paymentMethods: { method: string; orders: number }[];
+  sources: { source: string; visitors: number }[];
 };
 
 function shiftDay(day: string, delta: number): string {
@@ -159,6 +164,12 @@ export async function getStoreStats(storeId: string, days: number): Promise<Stor
       and (paid_at at time zone ${TIME_ZONE})::date between ${from}::date and ${to}::date
     group by 1 order by 2 desc`)) as unknown as Row[];
 
+  const sources = (await db.execute(sql`
+    select source, count(*)::int as visitors
+    from page_visits
+    where scope = ${scope} and day between ${from}::date and ${to}::date
+    group by source order by visitors desc limit 8`)) as unknown as Row[];
+
   const visitsByDay = new Map(visits.map((row) => [String(row.day), row]));
   const ordersByDay = new Map(orders.map((row) => [String(row.day), row]));
   const series: DailyPoint[] = [];
@@ -215,5 +226,9 @@ export async function getStoreStats(storeId: string, days: number): Promise<Stor
       revenueCents: num(row.revenue),
     })),
     paymentMethods: methods.map((row) => ({ method: String(row.method), orders: num(row.orders) })),
+    sources: sources.map((row) => ({
+      source: String(row.source ?? ""),
+      visitors: num(row.visitors),
+    })),
   };
 }
