@@ -417,3 +417,40 @@ export async function getPublicAlbum(rawHostname: string, albumId: string) {
   const sales = await getStoreSalesStatus(store.id);
   return { album, photos: await publicPhotos(store.id, album.id), purchasesEnabled: sales.enabled };
 }
+
+export type OnboardingProgress = {
+  profile: boolean;
+  photos: boolean;
+  payments: boolean;
+  published: boolean;
+  firstVisit: boolean;
+  firstSale: boolean;
+  photoCount: number;
+  mercadoPago: boolean;
+};
+
+/** What a new photographer has already done, for the "first steps" guide. */
+export async function getOnboardingProgress(storeId: string): Promise<OnboardingProgress> {
+  const draft = await getStoreDraft(storeId);
+  const [row] = (await db.execute(sql`
+    select
+      (select count(*)::int from photos where store_id = ${storeId} and status <> 'archived') as photos,
+      (select count(*)::int from photos where store_id = ${storeId} and status = 'published') as published_photos,
+      exists (select 1 from store_payment_accounts where store_id = ${storeId}) as mercadopago,
+      (select publication_status from stores where id = ${storeId}) as publication,
+      exists (select 1 from page_visits where scope = ${`store:${storeId}`}) as visited,
+      exists (select 1 from orders where store_id = ${storeId} and status = 'paid') as sold
+  `)) as unknown as Array<Record<string, unknown>>;
+  const photoCount = Number(row?.photos ?? 0);
+  const mercadoPago = Boolean(row?.mercadopago);
+  return {
+    profile: Boolean(draft.coverPhotoId) && draft.bio.trim().length > 0,
+    photos: Number(row?.published_photos ?? 0) > 0,
+    payments: mercadoPago || draft.paymentInstructions.trim().length > 0,
+    published: row?.publication === "published",
+    firstVisit: Boolean(row?.visited),
+    firstSale: Boolean(row?.sold),
+    photoCount,
+    mercadoPago,
+  };
+}
