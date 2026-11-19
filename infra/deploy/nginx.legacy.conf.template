@@ -1,0 +1,42 @@
+# Previous platform domain (__OLD_DOMAIN__) after moving to __NEW_DOMAIN__.
+# Pages and store links redirect permanently to the same path on the new domain.
+# /api/ keeps working on the old domain so Mercado Pago callbacks and webhooks
+# registered there are not lost (see MP_PUBLIC_BASE_URL).
+map $host $photo_platform_new_host {
+    default                       __NEW_DOMAIN__;
+    ~^(?<sub>[a-z0-9-]+)\.__OLD_DOMAIN_RE__$  $sub.__NEW_DOMAIN__;
+}
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name __OLD_DOMAIN__ *.__OLD_DOMAIN__;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    server_name __OLD_DOMAIN__ *.__OLD_DOMAIN__;
+
+    ssl_certificate /etc/letsencrypt/live/__OLD_CERT__/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/__OLD_CERT__/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    client_max_body_size 35m;
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:__API_PORT__;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 120s;
+    }
+
+    location / {
+        return 301 https://$photo_platform_new_host$request_uri;
+    }
+}

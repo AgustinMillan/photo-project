@@ -215,7 +215,7 @@ export function AdminPage() {
       <header className="border-b border-line bg-surface">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-5 py-4">
           <p className="font-mono text-xs uppercase tracking-[0.3em] text-accent">
-            Photo Platform · Admin
+            Galeriza · Admin
           </p>
           <div className="flex items-center gap-3 text-sm">
             <span className="text-fg-dim">{user?.email}</span>

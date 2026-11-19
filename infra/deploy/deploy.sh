@@ -11,7 +11,8 @@ DOMAIN="${DOMAIN:?set DOMAIN, e.g. fotos.example.com}"
 DEPLOY_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(cd "$DEPLOY_DIR/../.." && pwd)"
 WEB_ROOT="${WEB_ROOT:-/var/www/photo-platform}"
-SITE_FILE="/etc/nginx/sites-available/photo-platform"
+SITE_NAME="${SITE_NAME:-photo-platform}"
+SITE_FILE="/etc/nginx/sites-available/$SITE_NAME"
 API_PORT="$(grep -E '^API_HOST_PORT=' "$DEPLOY_DIR/.env" | cut -d= -f2)"
 API_PORT="${API_PORT:-3100}"
 SUPPORT_EMAIL="$(grep -E '^SUPPORT_EMAIL=' "$DEPLOY_DIR/.env" | cut -d= -f2 || true)"
@@ -54,7 +55,7 @@ if [[ ! -f "$SITE_FILE" ]]; then
   echo "==> Creating nginx site for $DOMAIN"
   sed -e "s|__DOMAIN__|$DOMAIN|g" -e "s|__WEB_ROOT__|$WEB_ROOT|g" -e "s|__API_PORT__|$API_PORT|g" \
     "$DEPLOY_DIR/nginx.conf.template" > "$SITE_FILE"
-  ln -sf "$SITE_FILE" /etc/nginx/sites-enabled/photo-platform
+  ln -sf "$SITE_FILE" "/etc/nginx/sites-enabled/$SITE_NAME"
 fi
 nginx -t
 systemctl reload nginx

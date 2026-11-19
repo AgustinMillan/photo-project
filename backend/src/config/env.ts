@@ -10,6 +10,9 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().min(1).default("http://localhost:5173"),
   APP_URL: z.string().url().default("http://localhost:5173"),
   PLATFORM_DOMAIN: z.string().min(1).default("localhost"),
+  // Base URL registered in the Mercado Pago app for OAuth callback and webhooks.
+  // Defaults to APP_URL; set it to keep a previous domain while migrating.
+  MP_PUBLIC_BASE_URL: z.string().url().optional(),
   JWT_ACCESS_SECRET: z.string().min(32, "JWT_ACCESS_SECRET must have at least 32 characters"),
   JWT_ISSUER: z.string().min(1).default("photo-platform"),
   JWT_AUDIENCE: z.string().min(1).default("photo-platform-api"),

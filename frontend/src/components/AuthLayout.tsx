@@ -15,7 +15,7 @@ export function AuthLayout({
     <main className="flex min-h-screen items-center justify-center px-4 py-10">
       <div className="w-full max-w-md">
         <p className="mb-8 text-center font-mono text-xs uppercase tracking-[0.3em] text-accent">
-          Photo Platform
+          Galeriza
         </p>
         <div className="rounded-ui border border-line bg-surface p-8">
           <h1 className="font-display text-3xl text-fg">{title}</h1>
